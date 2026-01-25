@@ -100,3 +100,18 @@ volumes and prices should be formatted with commas (i.e. 100,000 not
 Note 1: the volume displayed for iceberg orders should be the current peak volume,
 not total volume.
 Note 2: the order book entries must be displayed in priority order.
+
+
+
+Instructions on the website:
+SETSmm Iceberg Order Exercise
+The object of this exercise is to implement a simulator for SETSmm Iceberg order functionality in Java as specified in the document SETSmmIcebergSpecification.pdf. Full instructions for this exercise can be found in SETSmmIcebergExercise.pdf.
+
+Notes
+You can write and execute code in Codebase, however the platform was designed primarily as a means of distributing and submitting assessments and is not intended to replace a full-featured IDE. You may prefer to develop your solution using a different editor and then upload it via the Files panel on the left-hand side of this page when you are ready to submit your work.
+The source code for your solution should be uploaded to the Solution folder and any unit tests should be added to the Test folder.
+The file SETSOrderBookExercise.java is the entrypoint to your solution. Do not remove this file as it is required by our test harness.
+Clicking Execute will run a set of basic built-in tests as well as any additional tests you write (see ExampleTest.java for an example unit test). You are strongly encouraged to add your own tests based on the behaviour described in the specification as well as any other edge cases you can identify (just like real life!). Any tests you add must be written using JUnit 5.
+After you click Submit, your workspace will be locked for editing and we will run a set of more comprehensive tests against your solution. The results of these tests will be shared with the person grading your submission.
+We might unlock your workspace again to allow you to make further submissions (e.g. if we spot some small bugs during our initial round of grading) so don’t panic if you click Submit too soon!
+Codebase supports OpenJDK 11 (build 11.0.11).

@@ -1,2 +1,6 @@
-OrderBookTest.class
+IcebergTest.class
+VerificationTest.class
 ExampleTest.class
+TestInputParser.class
+TestOrder.class
+OrderBookTest.class

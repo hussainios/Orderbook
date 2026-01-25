@@ -27,6 +27,7 @@ public class InputParser {
             return null;
         }
 
+        // Process the side of the order
         char side = parts[0].trim().charAt(0);
         if (side != 'B' && side != 'S') {
             return null;
@@ -38,7 +39,7 @@ public class InputParser {
             int totalQuantity = Integer.parseInt(parts[3].trim());
 
             if (parts.length == 4) {
-                // Limit order: fully visible
+                // Limit order: No peak size
                 return Order.limit(side, id, price, totalQuantity);
             } else {
                 int peakSize = Integer.parseInt(parts[4].trim());
