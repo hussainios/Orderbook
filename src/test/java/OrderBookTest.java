@@ -294,4 +294,18 @@ public class OrderBookTest {
         assertEquals(1, orderBook.getBuyRows().size());
         assertEquals(9, orderBook.getBuyRows().get(0).getVolume());
     }
+
+    @Test
+    public void testIncomingMatchesIcebergThenNextOrder() {
+    OrderBook orderBook = new OrderBook();
+    orderBook.addOrder(Order.iceberg('S', 1, 100, 30, 10));
+    orderBook.addOrder(Order.limit('S', 2, 100, 15));
+    List<Trade> trades = orderBook.addOrder(Order.limit('B', 3, 100, 25));
+    
+    assertEquals(2, trades.size());
+    assertEquals(10, trades.get(0).getQuantity()); // First trade with iceberg
+    assertEquals(15, trades.get(1).getQuantity()); // Second trade with limit
+    assertEquals(1, orderBook.getSellOrderCount(100)); // Only iceberg remains
+    assertEquals(10, orderBook.getSellRows().get(0).getVolume()); // Iceberg's second peak
+}
 }
