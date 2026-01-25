@@ -39,7 +39,7 @@ public class OrderBookTest {
         OrderBook book = new OrderBook();
         // Resting sell
         book.addOrder(Order.limit('S', 1, 100, 50));
-        // Aggressive buy
+        // Incoming buy
         book.addOrder(Order.limit('B', 2, 100, 50));
 
         assertEquals(0, book.getSellOrderCount(100), "Sell order should be gone");
@@ -52,7 +52,7 @@ public class OrderBookTest {
         // Resting iceberg buy: Total 100, Peak 40, Price 100
         book.addOrder(Order.iceberg('B', 1, 100, 100, 40));
         
-        // Aggressive sell: Qty 50, Price 100
+        // Incoming sell: Qty 50, Price 100
         book.addOrder(Order.limit('S', 2, 100, 50));
 
         // After matching 40 from the first peak, the iceberg should replenish

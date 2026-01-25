@@ -4,46 +4,22 @@ import java.util.*;
 public class OrderOutputter {
     
     /**
-     * Prints a trade execution
+     * Prints a list of trades
      */
-    public void printTrade(Order aggressor, int passiveId, int price, int quantity) {
-        if (quantity <= 0) return;
-        
-        int buyId, sellId;
-        if (aggressor.getSide() == 'B') {
-            buyId = aggressor.getId();
-            sellId = passiveId;
-        } else {
-            buyId = passiveId;
-            sellId = aggressor.getId();
+    public void printTrades(List<Trade> trades) {
+        for (Trade trade : trades) {
+            System.out.println(trade.toString());
         }
-        
-        System.out.println(buyId + "," + sellId + "," + price + "," + quantity);
     }
     
     /**
      * Prints the current state of the order book
      */
-    public void printBook(TreeMap<Integer, ArrayDeque<Order>> buySide, 
-                          TreeMap<Integer, ArrayDeque<Order>> sellSide) {
+    public void printBook(List<BookRow> buyRows, List<BookRow> sellRows) {
         System.out.println("+-----------------------------------------------------------------+");
         System.out.println("| BUY                            | SELL                           |");
         System.out.println("| Id       | Volume      | Price | Price | Volume      | Id       |");
         System.out.println("+----------+-------------+-------+-------+-------------+----------+");
-
-        List<BookRow> buyRows = new ArrayList<>();
-        for (Map.Entry<Integer, ArrayDeque<Order>> entry : buySide.entrySet()) {
-            for (Order o : entry.getValue()) {
-                buyRows.add(new BookRow(o.getId(), o.getVisibleQuantity(), entry.getKey()));
-            }
-        }
-
-        List<BookRow> sellRows = new ArrayList<>();
-        for (Map.Entry<Integer, ArrayDeque<Order>> entry : sellSide.entrySet()) {
-            for (Order o : entry.getValue()) {
-                sellRows.add(new BookRow(o.getId(), o.getVisibleQuantity(), entry.getKey()));
-            }
-        }
 
         int maxRows = Math.max(buyRows.size(), sellRows.size());
         for (int i = 0; i < maxRows; i++) {
@@ -59,22 +35,22 @@ public class OrderOutputter {
         StringBuilder sb = new StringBuilder("|");
         
         // Buy Id (10)
-        sb.append(formatField(buy != null ? String.valueOf(buy.id) : "", 10, true));
+        sb.append(formatField(buy != null ? String.valueOf(buy.getId()) : "", 10, true));
         sb.append("|");
         // Buy Volume (13)
-        sb.append(formatField(buy != null ? formatNumber(buy.volume) : "", 13, true));
+        sb.append(formatField(buy != null ? formatNumber(buy.getVolume()) : "", 13, true));
         sb.append("|");
         // Buy Price (7)
-        sb.append(formatField(buy != null ? formatNumber(buy.price) : "", 7, true));
+        sb.append(formatField(buy != null ? formatNumber(buy.getPrice()) : "", 7, true));
         sb.append("|");
         // Sell Price (7)
-        sb.append(formatField(sell != null ? formatNumber(sell.price) : "", 7, true));
+        sb.append(formatField(sell != null ? formatNumber(sell.getPrice()) : "", 7, true));
         sb.append("|");
         // Sell Volume (13)
-        sb.append(formatField(sell != null ? formatNumber(sell.volume) : "", 13, true));
+        sb.append(formatField(sell != null ? formatNumber(sell.getVolume()) : "", 13, true));
         sb.append("|");
         // Sell Id (10)
-        sb.append(formatField(sell != null ? String.valueOf(sell.id) : "", 10, true));
+        sb.append(formatField(sell != null ? String.valueOf(sell.getId()) : "", 10, true));
         sb.append("|");
         
         return sb.toString();
@@ -93,18 +69,6 @@ public class OrderOutputter {
 
     private String formatNumber(int number) {
         return new DecimalFormat("#,###").format(number);
-    }
-}
-
-class BookRow {
-    int id;
-    int volume;
-    int price;
-
-    BookRow(int id, int volume, int price) {
-        this.id = id;
-        this.volume = volume;
-        this.price = price;
     }
 }
 

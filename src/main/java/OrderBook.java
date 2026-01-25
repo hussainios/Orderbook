@@ -7,12 +7,10 @@ public class OrderBook {
     // Sell side (Price ASC)
     private TreeMap<Integer, ArrayDeque<Order>> sellSide = new TreeMap<>();
     
-    // Outputter for trades and book display
-    private OrderOutputter outputter = new OrderOutputter();
-
-    public void addOrder(Order incoming) {
+    // Main public method for adding orders
+    public List<Trade> addOrder(Order incoming) {
         // 1. Process matches against the opposite side
-        processMatches(incoming);
+        List<Trade> trades = processMatches(incoming);
 
         // 2. Add remaining quantity to the book
         if (incoming.getTotalQuantity() > 0) {
@@ -22,54 +20,51 @@ public class OrderBook {
                 sellSide.computeIfAbsent(incoming.getPrice(), k -> new ArrayDeque<>()).addLast(incoming);
             }
         }
-
-        // 3. Print the book after every order insertion
-        outputter.printBook(buySide, sellSide);
+        
+        return trades;
     }
 
-    private void processMatches(Order aggressor) {
-        char side = aggressor.getSide();
+    // Private helper method for addOrder
+    private List<Trade> processMatches(Order incomingOrder) {
+        char side = incomingOrder.getSide();
         TreeMap<Integer, ArrayDeque<Order>> oppositeSide = (side == 'B') ? sellSide : buySide;
 
-        // Map to track total quantity matched against each passive order ID during this aggressor's match cycle.
-        // We also need to remember the price for each trade.
-        // Key: Order ID, Value: TradeRecord(price, totalQuantity)
-        Map<Integer, TradeRecord> trades = new LinkedHashMap<>();
+        List<Trade> trades = new ArrayList<>();
+        // Map to track total quantity matched against each existing order ID during this incomingOrder's match cycle.
+        // Key: Order ID, Value: QuantityMatched
+        Map<Integer, Integer> matchQuantities = new LinkedHashMap<>();
+        Map<Integer, Integer> matchPrices = new HashMap<>();
 
-        while (aggressor.getTotalQuantity() > 0 && !oppositeSide.isEmpty()) {
+        while (incomingOrder.getTotalQuantity() > 0 && !oppositeSide.isEmpty()) {
             Map.Entry<Integer, ArrayDeque<Order>> bestEntry = oppositeSide.firstEntry();
             int bestPrice = bestEntry.getKey();
 
             // Check if price matches
-            if (side == 'B' && aggressor.getPrice() < bestPrice) break;
-            if (side == 'S' && aggressor.getPrice() > bestPrice) break;
+            if (side == 'B' && incomingOrder.getPrice() < bestPrice) break;
+            if (side == 'S' && incomingOrder.getPrice() > bestPrice) break;
 
             ArrayDeque<Order> queue = bestEntry.getValue();
-            Order passive = queue.peekFirst();
+            Order existingOrder = queue.peekFirst();
             
-            if (passive == null) {
+            if (existingOrder == null) {
                 oppositeSide.remove(bestPrice);
                 continue;
             }
 
-            int matchQty = Math.min(aggressor.getTotalQuantity(), passive.getVisibleQuantity());
+            int matchQty = Math.min(incomingOrder.getTotalQuantity(), existingOrder.getVisibleQuantity());
             if (matchQty > 0) {
-                aggressor.reduceQuantity(matchQty);
-                passive.reduceQuantity(matchQty);
+                incomingOrder.reduceQuantity(matchQty);
+                existingOrder.reduceQuantity(matchQty);
                 
-                TradeRecord record = trades.get(passive.getId());
-                if (record == null) {
-                    trades.put(passive.getId(), new TradeRecord(bestPrice, matchQty));
-                } else {
-                    record.quantity += matchQty;
-                }
+                matchQuantities.put(existingOrder.getId(), matchQuantities.getOrDefault(existingOrder.getId(), 0) + matchQty);
+                matchPrices.put(existingOrder.getId(), bestPrice);
             }
 
-            if (passive.getVisibleQuantity() == 0) {
+            if (existingOrder.getVisibleQuantity() == 0) {
                 queue.removeFirst();
-                if (passive.getTotalQuantity() > 0) {
-                    passive.replenish();
-                    queue.addLast(passive);
+                if (existingOrder.getTotalQuantity() > 0) {
+                    existingOrder.replenish();
+                    queue.addLast(existingOrder);
                 }
             }
 
@@ -78,10 +73,39 @@ public class OrderBook {
             }
         }
 
-        // After all matching for this aggressor is done, emit the trades
-        for (Map.Entry<Integer, TradeRecord> entry : trades.entrySet()) {
-            outputter.printTrade(aggressor, entry.getKey(), entry.getValue().price, entry.getValue().quantity);
+        // Convert the match records into Trade objects
+        for (Integer existingOrderId : matchQuantities.keySet()) {
+            int qty = matchQuantities.get(existingOrderId);
+            int price = matchPrices.get(existingOrderId);
+            
+            if (side == 'B') {
+                trades.add(new Trade(incomingOrder.getId(), existingOrderId, price, qty));
+            } else {
+                trades.add(new Trade(existingOrderId, incomingOrder.getId(), price, qty));
+            }
         }
+        
+        return trades;
+    }
+
+    // Public methods for retrieving book rows
+    public List<BookRow> getBuyRows() {
+        return createBookRows(buySide);
+    }
+
+    public List<BookRow> getSellRows() {
+        return createBookRows(sellSide);
+    }
+
+    // Private helper method for getBuyRows and getSellRows
+    private List<BookRow> createBookRows(TreeMap<Integer, ArrayDeque<Order>> orderSide) {
+        List<BookRow> rows = new ArrayList<>();
+        for (Map.Entry<Integer, ArrayDeque<Order>> entry : orderSide.entrySet()) {
+            for (Order o : entry.getValue()) {
+                rows.add(new BookRow(o.getId(), o.getVisibleQuantity(), entry.getKey()));
+            }
+        }
+        return rows;
     }
 
     // Helper methods for testing
@@ -91,14 +115,5 @@ public class OrderBook {
 
     public int getSellOrderCount(int price) {
         return sellSide.containsKey(price) ? sellSide.get(price).size() : 0;
-    }
-}
-
-class TradeRecord {
-    int price;
-    int quantity;
-    TradeRecord(int price, int quantity) {
-        this.price = price;
-        this.quantity = quantity;
     }
 }
