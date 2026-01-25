@@ -1,7 +1,7 @@
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestParse {
+public class TestInputParser {
 
     @Test
     public void testParseLimitOrder() {

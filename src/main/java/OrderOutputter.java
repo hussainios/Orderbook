@@ -1,10 +1,15 @@
 import java.text.DecimalFormat;
 import java.util.*;
 
+/**
+ * Utility class for formatting and displaying the state of the order book and executed trades.
+ */
 public class OrderOutputter {
     
     /**
-     * Prints a list of trades
+     * Prints a list of trades to standard output in CSV format.
+     *
+     * @param trades the list of trades to print
      */
     public void printTrades(List<Trade> trades) {
         for (Trade trade : trades) {
@@ -13,7 +18,10 @@ public class OrderOutputter {
     }
     
     /**
-     * Prints the current state of the order book
+     * Prints the current state of the order book in a tabular format.
+     *
+     * @param buyRows the list of buy orders to display
+     * @param sellRows the list of sell orders to display
      */
     public void printBook(List<BookRow> buyRows, List<BookRow> sellRows) {
         System.out.println("+-----------------------------------------------------------------+");

@@ -1,6 +1,15 @@
+/**
+ * Utility class for parsing order input from strings.
+ */
 public class InputParser {
 
-    // Parse a line and return an Order, or null if line should be ignored
+    /**
+     * Parses a line of text into an {@link Order} object.
+     * Supports both limit and iceberg order formats.
+     *
+     * @param line the line of text to parse
+     * @return an {@link Order} if parsing is successful; null if the line is empty, a comment, or malformed
+     */
     public static Order parseLine(String line) {
         if (line == null) return null;
 

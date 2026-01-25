@@ -1,3 +1,7 @@
+/**
+ * Represents a single order in the order book.
+ * Supports both standard limit orders and iceberg orders.
+ */
 public class Order {
     
     private char side; // 'B' for buy, 'S' for sell
@@ -23,11 +27,19 @@ public class Order {
         this.visibleQuantity = visibleQuantity;
     }
     
+    /**
+     * Reduces the total and visible quantity of the order by the specified amount.
+     *
+     * @param amount the quantity to reduce by
+     */
     public void reduceQuantity(int amount) {
         this.totalQuantity -= amount;
         this.visibleQuantity -= amount;
     }
 
+    /**
+     * Replenishes the visible quantity for iceberg orders from the remaining total quantity.
+     */
     public void replenish() {
         if (peakSize > 0 && totalQuantity > 0) {
             this.visibleQuantity = Math.min(totalQuantity, peakSize);
@@ -39,7 +51,8 @@ public class Order {
     }
     
     public static Order iceberg(char side, int id, int price, int totalQuantity, int peakSize) {
-        return new Order(side, id, price, totalQuantity, peakSize, Math.min(totalQuantity, peakSize)); // Second PeakSize is the visible quantity
+        int visibleQuantity = Math.min(totalQuantity, peakSize);
+        return new Order(side, id, price, totalQuantity, peakSize, visibleQuantity); 
     }
 
 }
