@@ -6,6 +6,13 @@ import java.util.*;
  */
 public class OrderOutputter {
     
+    private static final int BUY_ID_WIDTH = 10;
+    private static final int BUY_VOLUME_WIDTH = 13;
+    private static final int BUY_PRICE_WIDTH = 7;
+    private static final int SELL_PRICE_WIDTH = 7;
+    private static final int SELL_VOLUME_WIDTH = 13;
+    private static final int SELL_ID_WIDTH = 10;
+
     /**
      * Prints a list of trades to standard output in CSV format.
      *
@@ -43,22 +50,22 @@ public class OrderOutputter {
         StringBuilder sb = new StringBuilder("|");
         
         // Buy Id (10)
-        sb.append(formatField(buy != null ? String.valueOf(buy.getId()) : "", 10, true));
+        sb.append(formatField(buy != null ? String.valueOf(buy.getId()) : "", BUY_ID_WIDTH, true));
         sb.append("|");
         // Buy Volume (13)
-        sb.append(formatField(buy != null ? formatNumber(buy.getVolume()) : "", 13, true));
+        sb.append(formatField(buy != null ? formatNumber(buy.getVolume()) : "", BUY_VOLUME_WIDTH, true));
         sb.append("|");
         // Buy Price (7)
-        sb.append(formatField(buy != null ? formatNumber(buy.getPrice()) : "", 7, true));
+        sb.append(formatField(buy != null ? formatNumber(buy.getPrice()) : "", BUY_PRICE_WIDTH, true));
         sb.append("|");
         // Sell Price (7)
-        sb.append(formatField(sell != null ? formatNumber(sell.getPrice()) : "", 7, true));
+        sb.append(formatField(sell != null ? formatNumber(sell.getPrice()) : "", SELL_PRICE_WIDTH, true));
         sb.append("|");
         // Sell Volume (13)
-        sb.append(formatField(sell != null ? formatNumber(sell.getVolume()) : "", 13, true));
+        sb.append(formatField(sell != null ? formatNumber(sell.getVolume()) : "", SELL_VOLUME_WIDTH, true));
         sb.append("|");
         // Sell Id (10)
-        sb.append(formatField(sell != null ? String.valueOf(sell.getId()) : "", 10, true));
+        sb.append(formatField(sell != null ? String.valueOf(sell.getId()) : "", SELL_ID_WIDTH, true));
         sb.append("|");
         
         return sb.toString();

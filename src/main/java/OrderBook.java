@@ -4,6 +4,19 @@ import java.util.*;
  * It supports both limit and iceberg orders.
  */
 public class OrderBook {
+    private static class MatchInfo {
+        private int quantity;
+        private int price;
+
+        private MatchInfo(int quantity, int price) {
+            this.quantity = quantity;
+            this.price = price;
+        }
+
+        private void addQuantity(int matchQuantity) {
+            this.quantity += matchQuantity;
+        }
+    }
     // price : Queue[OrderID]  Buy side (Price DESC)
     private TreeMap<Integer, ArrayDeque<Order>> buySide = new TreeMap<>(Collections.reverseOrder());
 
@@ -40,12 +53,10 @@ public class OrderBook {
      */
     private List<Trade> processMatches(Order incomingOrder) {
         char side = incomingOrder.getSide();
+        // Sorted hashmap price : Queue[OrderID]
         TreeMap<Integer, ArrayDeque<Order>> oppositeSide = determineOppositeSide(side);
-
-        // Order ID: QuantityMatched
-        Map<Integer, Integer> matchQuantities = new LinkedHashMap<>();
-        // Order ID: Price
-        Map<Integer, Integer> matchPrices = new HashMap<>();
+        // Ordered hashmap orderID : (quantity, price)
+        Map<Integer, MatchInfo> matchInfoByOrderId = new LinkedHashMap<>();
 
         while (incomingOrder.getTotalQuantity() > 0 && !oppositeSide.isEmpty()) {
             Map.Entry<Integer, ArrayDeque<Order>> bestEntry = oppositeSide.firstEntry();
@@ -55,28 +66,11 @@ public class OrderBook {
 
             if (!checkPriceOverlap(side, incomingOrder.getPrice(), bestPrice)) break;
 
-            if (existingOrder == null) {
-                oppositeSide.remove(bestPrice);
-                continue;
-            }
-
-            int incomingVisible = incomingOrder.getVisibleQuantity();
-            if (incomingVisible == 0 && incomingOrder.getTotalQuantity() > 0) {
-                incomingOrder.replenish();
-                incomingVisible = incomingOrder.getVisibleQuantity();
-            }
-            
+            int incomingVisible = ensureVisibleQuantity(incomingOrder);
             int existingVisible = existingOrder.getVisibleQuantity();
-            if (existingVisible == 0) {
-                queue.removeFirst();
-            
-                if (existingOrder.getTotalQuantity() > 0) {
-                    existingOrder.replenish();
-                    queue.addLast(existingOrder); // preserve time priority for iceberg refresh
-                }
-            
+            if (existingVisible == 0) {            
                 if (queue.isEmpty()) oppositeSide.remove(bestPrice);
-                continue; // re-peek best order (could be different now)
+                continue; 
             }
             
             int matchQuantity = Math.min(incomingVisible, existingVisible);
@@ -84,36 +78,18 @@ public class OrderBook {
                 continue;
             }
 
-
             // Execute match
-            incomingOrder.reduceQuantity(matchQuantity);
-            existingOrder.reduceQuantity(matchQuantity);
+            executeMatch(incomingOrder, existingOrder, matchQuantity, bestPrice, matchInfoByOrderId);
 
-            matchQuantities.put(existingOrder.getId(),
-            matchQuantities.getOrDefault(existingOrder.getId(), 0) + matchQuantity);
-            matchPrices.put(existingOrder.getId(), bestPrice);
-
-            // Handle existing order depletion / replenish
-            if (existingOrder.getVisibleQuantity() == 0) {
-                queue.removeFirst();
-                if (existingOrder.getTotalQuantity() > 0) {
-                    existingOrder.replenish();
-                    queue.addLast(existingOrder);
-                }
-            }
-
-            // Handle incoming order replenish
-            if (incomingOrder.getVisibleQuantity() == 0 && incomingOrder.getTotalQuantity() > 0) {
-                incomingOrder.replenish();
-            }
-
+            handleIncomingReplenish(incomingOrder);
+            handleExistingReplenish(queue, existingOrder);
             // Clean up empty price levels
             if (queue.isEmpty()) {
                 oppositeSide.remove(bestPrice);
             }
         }
 
-        return createTradesFromMatches(side, incomingOrder, matchQuantities, matchPrices);
+        return createTradesFromMatches(side, incomingOrder, matchInfoByOrderId);
     }
 
     public List<BookRow> getBuyRows() {
@@ -160,6 +136,68 @@ public class OrderBook {
     }
 
     /**
+     * Ensures the order has a visible quantity if it has remaining total quantity.
+     *
+     * @param order the order to update
+     * @return the visible quantity after any replenishment
+     */
+    private int ensureVisibleQuantity(Order order) {
+        if (order.getVisibleQuantity() == 0 && order.getTotalQuantity() > 0) {
+            order.replenish();
+        }
+        return order.getVisibleQuantity();
+    }
+
+    /**
+     * Executes the match by updating quantities and recording match information.
+     *
+     * @param incomingOrder      the incoming order
+     * @param existingOrder      the existing order being matched against
+     * @param matchQuantity      the quantity to match
+     * @param price              the execution price
+     * @param matchInfoByOrderId the map to record match details
+     */
+    private void executeMatch(Order incomingOrder, Order existingOrder, int matchQuantity, int price, Map<Integer, MatchInfo> matchInfoByOrderId) {
+        incomingOrder.reduceQuantity(matchQuantity);
+        existingOrder.reduceQuantity(matchQuantity);
+
+        MatchInfo matchInfo = matchInfoByOrderId.get(existingOrder.getId());
+        if (matchInfo == null) {
+            matchInfo = new MatchInfo(0, price);
+            matchInfoByOrderId.put(existingOrder.getId(), matchInfo);
+        }
+        matchInfo.addQuantity(matchQuantity);
+        matchInfo.price = price;
+    }
+
+    /**
+     * Handles depletion and potential replenishment for an existing order at a price level.
+     *
+     * @param queue the price level queue
+     * @param existingOrder the existing order to update
+     */
+    private void handleExistingReplenish(ArrayDeque<Order> queue, Order existingOrder) {
+        if (existingOrder.getVisibleQuantity() == 0) {
+            queue.removeFirst();
+            if (existingOrder.getTotalQuantity() > 0) {
+                existingOrder.replenish();
+                queue.addLast(existingOrder);
+            }
+        }
+    }
+
+    /**
+     * Handles replenishment for the incoming order when its visible quantity is depleted.
+     *
+     * @param incomingOrder the incoming order to update
+     */
+    private void handleIncomingReplenish(Order incomingOrder) {
+        if (incomingOrder.getVisibleQuantity() == 0 && incomingOrder.getTotalQuantity() > 0) {
+            incomingOrder.replenish();
+        }
+    }
+
+    /**
      * Checks if the incoming order's price matches the best price on the opposite side.
      *
      * @param side the side of the incoming order
@@ -178,15 +216,16 @@ public class OrderBook {
      *
      * @param side the side of the incoming order
      * @param incomingOrder the incoming order
-     * @param matchQuantities a map of existing order IDs to matched quantities
-     * @param matchPrices a map of existing order IDs to match prices
+     * @param matchInfoByOrderId a map of existing order IDs to matched info
      * @return a list of generated {@link Trade} objects
      */
-    private List<Trade> createTradesFromMatches(char side, Order incomingOrder, Map<Integer, Integer> matchQuantities, Map<Integer, Integer> matchPrices) {
+    private List<Trade> createTradesFromMatches(char side, Order incomingOrder, Map<Integer, MatchInfo> matchInfoByOrderId) {
         List<Trade> trades = new ArrayList<>();
-        for (Integer existingOrderId : matchQuantities.keySet()) {
-            int qty = matchQuantities.get(existingOrderId);
-            int price = matchPrices.get(existingOrderId);
+        for (Map.Entry<Integer, MatchInfo> entry : matchInfoByOrderId.entrySet()) {
+            Integer existingOrderId = entry.getKey();
+            MatchInfo matchInfo = entry.getValue();
+            int qty = matchInfo.quantity;
+            int price = matchInfo.price;
 
             if (side == 'B') {
                 trades.add(new Trade(incomingOrder.getId(), existingOrderId, price, qty));
