@@ -186,7 +186,7 @@ public class OrderBookTest {
     }
 
     @Test
-    public void testTradeAtPassiveOrderPrice() {
+    public void testTradeAtExistingOrderPrice() {
         OrderBook orderBook = new OrderBook();
         orderBook.addOrder(Order.limit('S', 1, 100, 50));
         List<Trade> trades = orderBook.addOrder(Order.limit('B', 2, 110, 50));

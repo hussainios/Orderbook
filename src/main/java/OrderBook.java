@@ -1,5 +1,4 @@
 import java.util.*;
-
 /**
  * Represents an order book that maintains buy and sell sides and processes incoming orders.
  * It supports both limit and iceberg orders.
@@ -51,11 +50,10 @@ public class OrderBook {
         while (incomingOrder.getTotalQuantity() > 0 && !oppositeSide.isEmpty()) {
             Map.Entry<Integer, ArrayDeque<Order>> bestEntry = oppositeSide.firstEntry();
             int bestPrice = bestEntry.getKey();
-
-            if (!checkPriceOverlap(side, incomingOrder.getPrice(), bestPrice)) break;
-
             ArrayDeque<Order> queue = bestEntry.getValue();
             Order existingOrder = queue.peekFirst();
+
+            if (!checkPriceOverlap(side, incomingOrder.getPrice(), bestPrice)) break;
 
             if (existingOrder == null) {
                 oppositeSide.remove(bestPrice);
@@ -63,35 +61,39 @@ public class OrderBook {
             }
 
             int incomingVisible = incomingOrder.getVisibleQuantity();
-            int existingVisible = existingOrder.getVisibleQuantity();
-            int matchQuantity = Math.min(incomingVisible, existingVisible);
-
-            // No visible quantity, try to replenish (iceberg)
-            if (matchQuantity == 0) {
-                if (incomingVisible == 0 && incomingOrder.getTotalQuantity() > 0) incomingOrder.replenish();
-                // Existing order needs to be added to back of queue if it has remaining quantity
-                if (existingVisible == 0 && existingOrder.getTotalQuantity() > 0) {
-                    queue.removeFirst();
-                    existingOrder.replenish();
-                    queue.addLast(existingOrder);
-                // Remove empty order
-                } else if (existingVisible == 0) {
-                    queue.removeFirst();
-                }
-
-                if (queue.isEmpty()) oppositeSide.remove(bestPrice);
-                break;
+            if (incomingVisible == 0 && incomingOrder.getTotalQuantity() > 0) {
+                incomingOrder.replenish();
+                incomingVisible = incomingOrder.getVisibleQuantity();
             }
+            
+            int existingVisible = existingOrder.getVisibleQuantity();
+            if (existingVisible == 0) {
+                queue.removeFirst();
+            
+                if (existingOrder.getTotalQuantity() > 0) {
+                    existingOrder.replenish();
+                    queue.addLast(existingOrder); // preserve time priority for iceberg refresh
+                }
+            
+                if (queue.isEmpty()) oppositeSide.remove(bestPrice);
+                continue; // re-peek best order (could be different now)
+            }
+            
+            int matchQuantity = Math.min(incomingVisible, existingVisible);
+            if (matchQuantity == 0) {
+                continue;
+            }
+
 
             // Execute match
             incomingOrder.reduceQuantity(matchQuantity);
             existingOrder.reduceQuantity(matchQuantity);
 
             matchQuantities.put(existingOrder.getId(),
-                    matchQuantities.getOrDefault(existingOrder.getId(), 0) + matchQuantity);
+            matchQuantities.getOrDefault(existingOrder.getId(), 0) + matchQuantity);
             matchPrices.put(existingOrder.getId(), bestPrice);
 
-            // Handle resting order depletion / replenish
+            // Handle existing order depletion / replenish
             if (existingOrder.getVisibleQuantity() == 0) {
                 queue.removeFirst();
                 if (existingOrder.getTotalQuantity() > 0) {
