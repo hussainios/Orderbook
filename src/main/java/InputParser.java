@@ -34,11 +34,10 @@ public class InputParser {
 
             if (parts.length == 4) {
                 // Limit order: No peak size
-                return Order.limit(side, id, price, totalQuantity);
-            } else {
-                int peakSize = Integer.parseInt(parts[4].trim());
-                return Order.iceberg(side, id, price, totalQuantity, peakSize);
+                return new LimitOrder(side, id, price, totalQuantity);
             }
+            int peakSize = Integer.parseInt(parts[4].trim());
+            return new IcebergOrder(side, id, price, totalQuantity, peakSize);
         } catch (NumberFormatException e) {
             return null;
         }

@@ -1,7 +1,10 @@
+LimitOrder.class
+OrderBook$MatchInfo.class
 Trade.class
 OrderBook.class
 InputParser.class
 SETSOrderBookExercise.class
+IcebergOrder.class
 BookRow.class
 Order.class
 OrderOutputter.class

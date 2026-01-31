@@ -29,7 +29,7 @@ public class OrderBook {
 
         // Add remaining quantity to the book if it has remaining quantity after matching
         if (incomingOrder.getTotalQuantity() > 0) {
-            incomingOrder.replenish();
+            incomingOrder.replenish(); // Reset visible quantity for icebergs
             if (incomingOrder.getSide() == 'B') {
                 buySide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
             } else {
@@ -63,24 +63,36 @@ public class OrderBook {
             ArrayDeque<Order> queue = bestEntry.getValue();
             Order existingOrder = queue.peekFirst();
 
-            int incomingQuantity = incomingOrder.getTotalQuantity();
-
-            handleExistingReplenish(queue, existingOrder);
-            if (queue.isEmpty()) {
-                oppositeSide.remove(bestPrice);
-            }
+            // Match against the existing order's visible quantity
+            // Polymorphism handles whether this is a Limit or Iceberg order
             int existingVisible = existingOrder.getVisibleQuantity();
+            int incomingTotal = incomingOrder.getTotalQuantity();
 
             // Calculate the amount traded in this match
-            int matchQuantity = Math.min(incomingQuantity, existingVisible);
+            int matchQuantity = Math.min(incomingTotal, existingVisible);
+            
             if (matchQuantity == 0) {
-                continue;
+                 // Should not happen if logic is correct, but safe to remove if empty
+                if (existingVisible == 0) {
+                     queue.removeFirst();
+                     if (queue.isEmpty()) {
+                        oppositeSide.remove(bestPrice);
+                     }
+                     continue;
+                }
             }
 
             executeMatch(incomingOrder, existingOrder, matchQuantity, bestPrice, matchInfoByOrderId);
 
-            // Update the incoming and existing order quantities
-            handleExistingReplenish(queue, existingOrder);
+            // Handle replenishment or removal of the existing order
+            if (existingOrder.getVisibleQuantity() == 0) {
+                queue.removeFirst();
+                if (existingOrder.getTotalQuantity() > 0) {
+                    existingOrder.replenish();
+                    queue.addLast(existingOrder);
+                }
+            }
+
             if (queue.isEmpty()) {
                 oppositeSide.remove(bestPrice);
             }
@@ -107,6 +119,7 @@ public class OrderBook {
         List<BookRow> rows = new ArrayList<>();
         for (Map.Entry<Integer, ArrayDeque<Order>> entry : orderSide.entrySet()) {
             for (Order o : entry.getValue()) {
+                // Polymorphic call to getVisibleQuantity()
                 rows.add(new BookRow(o.getId(), o.getVisibleQuantity(), entry.getKey()));
             }
         }
@@ -133,7 +146,7 @@ public class OrderBook {
      * Applies a match and records trade info.
      */
     private void executeMatch(Order incomingOrder, Order existingOrder, int matchQuantity, int price, Map<Integer, MatchInfo> matchInfoByOrderId) {
-        incomingOrder.reduceIncomingQuantity(matchQuantity);
+        incomingOrder.reduceQuantity(matchQuantity);
         existingOrder.reduceQuantity(matchQuantity);
 
         MatchInfo matchInfo = matchInfoByOrderId.get(existingOrder.getId());
@@ -143,19 +156,6 @@ public class OrderBook {
         }
         matchInfo.addQuantity(matchQuantity);
         matchInfo.price = price;
-    }
-
-    /**
-     * Handles depletion and potential replenishment for an existing order at a price level.
-     */
-    private void handleExistingReplenish(ArrayDeque<Order> queue, Order existingOrder) {
-        if (existingOrder.getVisibleQuantity() == 0) {
-            queue.removeFirst();
-            if (existingOrder.getTotalQuantity() > 0) {
-                existingOrder.replenish();
-                queue.addLast(existingOrder);
-            }
-        }
     }
 
     /**

@@ -8,11 +8,12 @@ public class TestInputParser {
         Order order = InputParser.parseLine("B,100322,5103,7500");
         
         assertNotNull(order);
+        assertTrue(order instanceof LimitOrder);
         assertEquals('B', order.getSide());
         assertEquals(100322, order.getId());
         assertEquals(5103, order.getPrice());
         assertEquals(7500, order.getTotalQuantity());
-        assertEquals(0, order.getPeakSize());
+        // LimitOrder does not have peak size
         assertEquals(7500, order.getVisibleQuantity()); 
     }
 
@@ -21,11 +22,12 @@ public class TestInputParser {
         Order order = InputParser.parseLine("S,100345,5103,100000,10000");
         
         assertNotNull(order);
+        assertTrue(order instanceof IcebergOrder);
         assertEquals('S', order.getSide());
         assertEquals(100345, order.getId());
         assertEquals(5103, order.getPrice());
         assertEquals(100000, order.getTotalQuantity());
-        assertEquals(10000, order.getPeakSize());
+        assertEquals(10000, ((IcebergOrder)order).getPeakSize());
         assertEquals(10000, order.getVisibleQuantity()); 
     }
 

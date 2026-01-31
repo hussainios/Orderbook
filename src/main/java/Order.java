@@ -1,67 +1,39 @@
-public class Order {
+public abstract class Order {
     
-    private char side; // 'B' for buy, 'S' for sell
-    private int id;
-    private int price;
-    private int totalQuantity;
-    private int peakSize; // 0 for limit orders, > 0 for iceberg orders
-    private int visibleQuantity;
+    protected char side; // 'B' for buy, 'S' for sell
+    protected int id;
+    protected int price;
+    protected int totalQuantity;
+
+    public Order(char side, int id, int price, int totalQuantity) {
+        this.side = side;
+        this.id = id;
+        this.price = price;
+        this.totalQuantity = totalQuantity;
+    }
 
     public char getSide() { return side; }
     public int getId() { return id; }
     public int getPrice() { return price; }
     public int getTotalQuantity() { return totalQuantity; }
-    public int getPeakSize() { return peakSize; }
-    public int getVisibleQuantity() { return visibleQuantity; }
 
-    Order(char side, int id, int price, int totalQuantity, int peakSize, int visibleQuantity) {
-        this.side = side;
-        this.id = id;
-        this.price = price;
-        this.totalQuantity = totalQuantity;
-        this.peakSize = peakSize;
-        this.visibleQuantity = visibleQuantity;
-    }
-    
     /**
-     * Reduces the total and visible quantity of the order by the specified amount.
+     * Returns the quantity currently visible in the order book.
+     */
+    public abstract int getVisibleQuantity();
+
+    /**
+     * Reduces the total quantity of the order.
+     * Subclasses must handle how this affects their visible quantity.
      *
      * @param amount the quantity to reduce by
      */
-    public void reduceQuantity(int amount) {
-        this.totalQuantity -= amount;
-        this.visibleQuantity -= amount;
-    }
+    public abstract void reduceQuantity(int amount);
 
     /**
-     * Reduces the total quantity of the incoming order by the specified amount.
-     * Ensures visible quantity does not exceed total quantity.
-     *
-     * @param amount the quantity to reduce by
+     * Replenishes the visible quantity.
+     * For Limit orders, this does nothing.
+     * For Iceberg orders, this resets visible quantity based on peak size and remaining total.
      */
-    public void reduceIncomingQuantity(int amount) {
-        this.totalQuantity -= amount;
-        if (this.visibleQuantity > this.totalQuantity) {
-            this.visibleQuantity = this.totalQuantity;
-        }
-    }
-
-    /**
-     * Replenishes the visible quantity for iceberg orders from the remaining total quantity.
-     */
-    public void replenish() {
-        if (peakSize > 0 && totalQuantity > 0) {
-            this.visibleQuantity = Math.min(totalQuantity, peakSize);
-        }
-    }
-
-    public static Order limit(char side, int id, int price, int quantity) {
-        return new Order(side, id, price, quantity, 0, quantity);
-    }
-    
-    public static Order iceberg(char side, int id, int price, int totalQuantity, int peakSize) {
-        int visibleQuantity = Math.min(totalQuantity, peakSize);
-        return new Order(side, id, price, totalQuantity, peakSize, visibleQuantity); 
-    }
-
+    public abstract void replenish();
 }

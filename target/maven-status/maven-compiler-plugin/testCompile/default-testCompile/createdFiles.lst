@@ -1,5 +1,8 @@
 VerificationTest.class
+TestIceberg.class
 ExampleTest.class
 TestInputParser.class
 TestOrder.class
+TestOrderOutputter.class
 OrderBookTest.class
+TestTrade.class
