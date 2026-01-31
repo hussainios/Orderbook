@@ -24,7 +24,6 @@ public class TestIceberg {
     public void runTest(String testId, String input, String expectedOutput) throws IOException {
 
         String stdOut = getOrderBookOutput(input);
-        // System.out.println(stdOut); // Debugging
 
         assertEquals(expectedOutput, stdOut);
     }

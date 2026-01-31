@@ -18,7 +18,6 @@ public class InputParser {
 
         String[] parts = line.split(",", -1);
 
-        
         if (parts.length != 4 && parts.length != 5) {
             return null;
         }

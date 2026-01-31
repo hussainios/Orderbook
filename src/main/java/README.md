@@ -28,7 +28,9 @@ Format: `Side,Id,Price,Quantity,Peak`
 
 Empty lines or lines starting with `#` are ignored
 
-## Output
+## Output Format
+After each line is processed, Creates trades and the current Orderbook state are outputted.
+
 1. **Trades** :
 ```
 buyId,sellId,price,quantity
