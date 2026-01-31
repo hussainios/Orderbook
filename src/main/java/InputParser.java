@@ -5,7 +5,7 @@ public class InputParser {
      * Supports both limit and iceberg order formats.
      *
      * @param line the line of text to parse
-     * @return an {@link Order} if parsing is successful; null if the line is empty, a comment, or malformed
+     * @return an {@link Order} if parsing is successful, otherwise null
      */
     public static Order parseLine(String line) {
         if (line == null) return null;

@@ -40,7 +40,7 @@ public class OrderBook {
     }
 
     /**
-     * Processes matches for the incoming order against orders on the opposite side of the book.
+     * Processes matches for the incoming order, keep matching until there are no more matches available.
      *
      * @param incomingOrder the order to match
      * @return a list of trades resulting from the matches
@@ -54,34 +54,34 @@ public class OrderBook {
 
         while (incomingOrder.getTotalQuantity() > 0 && !oppositeSide.isEmpty()) {
 
+            // Get the best price and check if it overlaps
             Map.Entry<Integer, ArrayDeque<Order>> bestEntry = oppositeSide.firstEntry();
             int bestPrice = bestEntry.getKey();
+            if (!checkPriceOverlap(side, incomingOrder.getPrice(), bestPrice)) break;
+
             ArrayDeque<Order> queue = bestEntry.getValue();
             Order existingOrder = queue.peekFirst();
 
-            if (!checkPriceOverlap(side, incomingOrder.getPrice(), bestPrice)) break;
+            handleIncomingReplenish(incomingOrder);
+            int incomingVisible = incomingOrder.getVisibleQuantity();
 
-            int incomingVisible = ensureVisibleQuantity(incomingOrder);
-            int existingVisible = existingOrder.getVisibleQuantity();
-            if (existingVisible == 0) {
-                handleExistingReplenish(queue, existingOrder);
-                if (queue.isEmpty()) {
-                    oppositeSide.remove(bestPrice);
-                }
-                continue;
+            handleExistingReplenish(queue, existingOrder);
+            if (queue.isEmpty()) {
+                oppositeSide.remove(bestPrice);
             }
-            
+            int existingVisible = existingOrder.getVisibleQuantity();
+
+            // Calculate the amount traded in this match
             int matchQuantity = Math.min(incomingVisible, existingVisible);
             if (matchQuantity == 0) {
                 continue;
             }
 
-            // Execute match
             executeMatch(incomingOrder, existingOrder, matchQuantity, bestPrice, matchInfoByOrderId);
 
+            // Update the incoming and existing order quantities
             handleIncomingReplenish(incomingOrder);
             handleExistingReplenish(queue, existingOrder);
-            // Clean up empty price levels
             if (queue.isEmpty()) {
                 oppositeSide.remove(bestPrice);
             }
@@ -101,7 +101,7 @@ public class OrderBook {
     /**
      * Creates book rows from the given side of the order book.
      *
-     * @param orderSide the TreeMap representing one side of the book
+     * @param orderSide A sorted Hashmap with the Prices : Queue[OrderID] representing one side of the book
      * @return a list of {@link BookRow} objects
      */
     private List<BookRow> createBookRows(TreeMap<Integer, ArrayDeque<Order>> orderSide) {
@@ -128,16 +128,6 @@ public class OrderBook {
      */
     private TreeMap<Integer, ArrayDeque<Order>> determineOppositeSide(char side) {
         return (side == 'B') ? sellSide : buySide;
-    }
-
-    /**
-     * Ensures visible quantity is replenished if needed.
-     */
-    private int ensureVisibleQuantity(Order order) {
-        if (order.getVisibleQuantity() == 0 && order.getTotalQuantity() > 0) {
-            order.replenish();
-        }
-        return order.getVisibleQuantity();
     }
 
     /**

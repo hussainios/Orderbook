@@ -13,7 +13,7 @@ public class TestInputParser {
         assertEquals(5103, order.getPrice());
         assertEquals(7500, order.getTotalQuantity());
         assertEquals(0, order.getPeakSize());
-        assertEquals(7500, order.getVisibleQuantity()); // Limit order: fully visible
+        assertEquals(7500, order.getVisibleQuantity()); 
     }
 
     @Test
@@ -26,7 +26,7 @@ public class TestInputParser {
         assertEquals(5103, order.getPrice());
         assertEquals(100000, order.getTotalQuantity());
         assertEquals(10000, order.getPeakSize());
-        assertEquals(10000, order.getVisibleQuantity()); // Iceberg: min(total, peak)
+        assertEquals(10000, order.getVisibleQuantity()); 
     }
 
     @Test
@@ -48,7 +48,7 @@ public class TestInputParser {
 
     @Test
     public void testParseInvalidFormat() {
-        assertNull(InputParser.parseLine("B,1,100")); // Too few fields
-        assertNull(InputParser.parseLine("B,1,100,50,10,20")); // Too many fields
+        assertNull(InputParser.parseLine("B,1,100")); 
+        assertNull(InputParser.parseLine("B,1,100,50,10,20")); 
     }
 }

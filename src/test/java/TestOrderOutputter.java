@@ -33,7 +33,7 @@ public class TestOrderOutputter {
         OrderOutputter orderOutputter = new OrderOutputter();
         orderOutputter.printTrades(trades);
 
-        // System.out.println adds a line separator, so we expect that in the output
+
         String expected = "1,2,100,50" + System.lineSeparator() + 
                           "3,4,105,20" + System.lineSeparator();
         
@@ -53,8 +53,6 @@ public class TestOrderOutputter {
 
         OrderOutputter orderOutputter = new OrderOutputter();
         orderOutputter.printBook(buyRows, sellRows);
-
-        // Construct the expected table output
         String expected = "+-----------------------------------------------------------------+" + System.lineSeparator() +
                           "| BUY                            | SELL                           |" + System.lineSeparator() +
                           "| Id       | Volume      | Price | Price | Volume      | Id       |" + System.lineSeparator() +

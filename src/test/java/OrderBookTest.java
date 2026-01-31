@@ -52,8 +52,8 @@ public class OrderBookTest {
         
         // Add some buy orders
         Order order1 = Order.limit('B', 1, 200, 100);
-        Order order2 = Order.limit('B', 2, 200, 50); // Same price as order1, should appear after
-        Order order3 = Order.limit('B', 3, 190, 75); // Lower price
+        Order order2 = Order.limit('B', 2, 200, 50); 
+        Order order3 = Order.limit('B', 3, 190, 75); 
 
         orderBook.addOrder(order1);
         orderBook.addOrder(order2);
@@ -61,11 +61,8 @@ public class OrderBookTest {
 
         List<BookRow> buyRows = orderBook.getBuyRows();
 
-        // Assert the size of the list
         assertEquals(3, buyRows.size());
 
-        // Verify the content and order of BookRows
-        // Expected order: Price (desc) then by arrival (FIFO for same price)
         assertEquals(1, buyRows.get(0).getId());
         assertEquals(100, buyRows.get(0).getVolume());
         assertEquals(200, buyRows.get(0).getPrice());
@@ -90,7 +87,6 @@ public class OrderBookTest {
         assertEquals(0, orderBook.getSellOrderCount(200));
     }
 
-    // Buy order sweeps multiple sell orders
     @Test
     public void testBuyOrderSweepsMultipleSells() {
         OrderBook orderBook = new OrderBook();
@@ -101,7 +97,7 @@ public class OrderBookTest {
         assertEquals(50, trades.get(0).getQuantity());
         assertEquals(30, trades.get(1).getQuantity());
         assertEquals(0, orderBook.getSellOrderCount(100));
-        assertEquals(1, orderBook.getBuyOrderCount(100)); // 20 remaining
+        assertEquals(1, orderBook.getBuyOrderCount(100)); 
         assertEquals(20, orderBook.getBuyRows().get(0).getVolume());
     }
 
@@ -293,6 +289,7 @@ public class OrderBookTest {
         assertEquals(0, orderBook.getSellRows().size());
         assertEquals(1, orderBook.getBuyRows().size());
         assertEquals(9, orderBook.getBuyRows().get(0).getVolume());
+        assertEquals(2, trades.size());
     }
 
     @Test
@@ -303,9 +300,49 @@ public class OrderBookTest {
     List<Trade> trades = orderBook.addOrder(Order.limit('B', 3, 100, 25));
     
     assertEquals(2, trades.size());
-    assertEquals(10, trades.get(0).getQuantity()); // First trade with iceberg
-    assertEquals(15, trades.get(1).getQuantity()); // Second trade with limit
-    assertEquals(1, orderBook.getSellOrderCount(100)); // Only iceberg remains
-    assertEquals(10, orderBook.getSellRows().get(0).getVolume()); // Iceberg's second peak
+    assertEquals(10, trades.get(0).getQuantity()); 
+    assertEquals(15, trades.get(1).getQuantity()); 
+    assertEquals(1, orderBook.getSellOrderCount(100)); 
+    assertEquals(10, orderBook.getSellRows().get(0).getVolume()); 
 }
+
+    @Test
+    public void testIcebergRestingVisibleQuantityWhenNoMatch() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(Order.iceberg('B', 10, 200, 100, 15));
+        assertEquals(1, orderBook.getBuyOrderCount(200));
+        assertEquals(15, orderBook.getBuyRows().get(0).getVolume());
+        assertEquals(10, orderBook.getBuyRows().get(0).getId());
+    }
+
+    @Test
+    public void testIcebergRequeueBehindAllSamePriceOrders() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(Order.iceberg('S', 1, 100, 10, 5));
+        orderBook.addOrder(Order.limit('S', 2, 100, 5));
+        orderBook.addOrder(Order.limit('S', 3, 100, 5));
+        orderBook.addOrder(Order.limit('B', 4, 100, 5));
+        List<BookRow> sells = orderBook.getSellRows();
+        assertEquals(3, sells.size());
+        assertEquals(2, sells.get(0).getId());
+        assertEquals(3, sells.get(1).getId());
+        assertEquals(1, sells.get(2).getId());
+    }
+
+    @Test
+    public void testFIFOWithinSamePriceLevel() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(Order.limit('S', 1, 100, 5));
+        orderBook.addOrder(Order.limit('S', 2, 100, 7));
+
+        List<Trade> trades = orderBook.addOrder(Order.limit('B', 3, 100, 10));
+        assertEquals(2, trades.size());
+        assertEquals(1, trades.get(0).getSellOrderId());
+        assertEquals(2, trades.get(1).getSellOrderId());
+        assertEquals(5, trades.get(0).getQuantity());
+        assertEquals(5, trades.get(1).getQuantity());
+        assertEquals(1, orderBook.getSellOrderCount(100));
+        assertEquals(2, orderBook.getSellRows().get(0).getId());
+        assertEquals(2, orderBook.getSellRows().get(0).getVolume());
+    }
 }
