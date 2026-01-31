@@ -1,7 +1,3 @@
-/**
- * Represents a single order in the order book.
- * Supports both standard limit orders and iceberg orders.
- */
 public class Order {
     
     private char side; // 'B' for buy, 'S' for sell

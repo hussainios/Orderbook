@@ -1,6 +1,3 @@
-/**
- * Utility class for parsing order input from strings.
- */
 public class InputParser {
 
     /**
@@ -15,7 +12,6 @@ public class InputParser {
 
         line = line.trim();
 
-        // Skip empty lines and comments
         if (line.isEmpty() || line.startsWith("#")) {
             return null;
         }
@@ -27,7 +23,6 @@ public class InputParser {
             return null;
         }
 
-        // Process the side of the order
         char side = parts[0].trim().charAt(0);
         if (side != 'B' && side != 'S') {
             return null;

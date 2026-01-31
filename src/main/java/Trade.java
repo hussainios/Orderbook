@@ -1,6 +1,3 @@
-/**
- * Represents an execution between a buyer and a seller.
- */
 public class Trade {
     private final int buyOrderId;
     private final int sellOrderId;
@@ -8,12 +5,7 @@ public class Trade {
     private final int quantity;
 
     /**
-     * Constructs a new Trade record.
-     *
-     * @param buyOrderId the ID of the buying order
-     * @param sellOrderId the ID of the selling order
-     * @param price the price at which the trade occurred
-     * @param quantity the amount of shares traded
+     * Trade record for output.
      */
     public Trade(int buyOrderId, int sellOrderId, int price, int quantity) {
         this.buyOrderId = buyOrderId;
@@ -28,7 +20,7 @@ public class Trade {
     public int getQuantity() { return quantity; }
 
     /**
-     * Returns a CSV representation of the trade: buyOrderId,sellOrderId,price,quantity.
+     * Returns a CSV representation of the trade: buyOrderId, sellOrderId, price, quantity.
      */
     @Override
     public String toString() {

@@ -1,9 +1,6 @@
 import java.text.DecimalFormat;
 import java.util.*;
 
-/**
- * Utility class for formatting and displaying the state of the order book and executed trades.
- */
 public class OrderOutputter {
     
     private static final int BUY_ID_WIDTH = 10;
@@ -13,11 +10,7 @@ public class OrderOutputter {
     private static final int SELL_VOLUME_WIDTH = 13;
     private static final int SELL_ID_WIDTH = 10;
 
-    /**
-     * Prints a list of trades to standard output in CSV format.
-     *
-     * @param trades the list of trades to print
-     */
+
     public void printTrades(List<Trade> trades) {
         for (Trade trade : trades) {
             System.out.println(trade.toString());
@@ -25,10 +18,10 @@ public class OrderOutputter {
     }
     
     /**
-     * Prints the current state of the order book in a tabular format.
+     * Prints the current state of the order book in the required format
      *
-     * @param buyRows the list of buy orders to display
-     * @param sellRows the list of sell orders to display
+     * @param buyRows the list of buy orders with their volume and price to display
+     * @param sellRows the list of sell orders with their volume and price to display
      */
     public void printBook(List<BookRow> buyRows, List<BookRow> sellRows) {
         System.out.println("+-----------------------------------------------------------------+");
@@ -46,40 +39,47 @@ public class OrderOutputter {
         System.out.println("+-----------------------------------------------------------------+");
     }
     
+    /**
+     * Creates a single row of the order book in the required format
+     *
+     * @param buy the buy order with its volume and price
+     * @param sell the sell order with its volume and price
+     * @return the row of the order book in the required format
+     */
     private String formatRow(BookRow buy, BookRow sell) {
         StringBuilder sb = new StringBuilder("|");
         
-        // Buy Id (10)
-        sb.append(formatField(buy != null ? String.valueOf(buy.getId()) : "", BUY_ID_WIDTH, true));
+
+        sb.append(formatField(buy != null ? String.valueOf(buy.getId()) : "", BUY_ID_WIDTH));
         sb.append("|");
-        // Buy Volume (13)
-        sb.append(formatField(buy != null ? formatNumber(buy.getVolume()) : "", BUY_VOLUME_WIDTH, true));
+        sb.append(formatField(buy != null ? formatNumber(buy.getVolume()) : "", BUY_VOLUME_WIDTH));
         sb.append("|");
-        // Buy Price (7)
-        sb.append(formatField(buy != null ? formatNumber(buy.getPrice()) : "", BUY_PRICE_WIDTH, true));
+        sb.append(formatField(buy != null ? formatNumber(buy.getPrice()) : "", BUY_PRICE_WIDTH));
         sb.append("|");
-        // Sell Price (7)
-        sb.append(formatField(sell != null ? formatNumber(sell.getPrice()) : "", SELL_PRICE_WIDTH, true));
+        sb.append(formatField(sell != null ? formatNumber(sell.getPrice()) : "", SELL_PRICE_WIDTH));
         sb.append("|");
-        // Sell Volume (13)
-        sb.append(formatField(sell != null ? formatNumber(sell.getVolume()) : "", SELL_VOLUME_WIDTH, true));
+        sb.append(formatField(sell != null ? formatNumber(sell.getVolume()) : "", SELL_VOLUME_WIDTH));
         sb.append("|");
-        // Sell Id (10)
-        sb.append(formatField(sell != null ? String.valueOf(sell.getId()) : "", SELL_ID_WIDTH, true));
+        sb.append(formatField(sell != null ? String.valueOf(sell.getId()) : "", SELL_ID_WIDTH));
         sb.append("|");
         
         return sb.toString();
     }
 
-    private String formatField(String value, int width, boolean rightJustify) {
+
+    /**
+     * Formats the entries so that they are aligned correctly in the order book
+     *
+     * @param value the value to format
+     * @param width the width of the field
+     * Always right pads the field so that IDs/numbers align.
+     * @return the formatted field
+     */
+    private String formatField(String value, int width) {
         if (value.isEmpty()) {
             return " ".repeat(width);
         }
-        if (rightJustify) {
-            return String.format("%" + width + "s", value);
-        } else {
-            return String.format("%-" + width + "s", value);
-        }
+        return String.format("%" + width + "s", value);
     }
 
     private String formatNumber(int number) {

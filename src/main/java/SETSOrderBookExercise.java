@@ -2,16 +2,11 @@ import java.util.Scanner;
 import java.util.List;
 
 /**
- * Main entry point for the SETS order book simulation.
- * Reads orders from standard input and displays trades and the updated order book state.
+ * Main entry point for the order book
+ * Reads orders from the input, calculates the trades and displays the updated order book state.
  */
 public class SETSOrderBookExercise {
 
-    /**
-     * Main method to run the order book exercise.
-     *
-     * @param args command line arguments (not used)
-     */
     public static void main(String[] args) {
         OrderBook book = new OrderBook();
         OrderOutputter outputter = new OrderOutputter();
