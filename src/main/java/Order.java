@@ -34,6 +34,19 @@ public class Order {
     }
 
     /**
+     * Reduces the total quantity of the incoming order by the specified amount.
+     * Ensures visible quantity does not exceed total quantity.
+     *
+     * @param amount the quantity to reduce by
+     */
+    public void reduceIncomingQuantity(int amount) {
+        this.totalQuantity -= amount;
+        if (this.visibleQuantity > this.totalQuantity) {
+            this.visibleQuantity = this.totalQuantity;
+        }
+    }
+
+    /**
      * Replenishes the visible quantity for iceberg orders from the remaining total quantity.
      */
     public void replenish() {

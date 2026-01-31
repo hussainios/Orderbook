@@ -29,6 +29,7 @@ public class OrderBook {
 
         // Add remaining quantity to the book if it has remaining quantity after matching
         if (incomingOrder.getTotalQuantity() > 0) {
+            incomingOrder.replenish();
             if (incomingOrder.getSide() == 'B') {
                 buySide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
             } else {
@@ -62,8 +63,7 @@ public class OrderBook {
             ArrayDeque<Order> queue = bestEntry.getValue();
             Order existingOrder = queue.peekFirst();
 
-            handleIncomingReplenish(incomingOrder);
-            int incomingVisible = incomingOrder.getVisibleQuantity();
+            int incomingQuantity = incomingOrder.getTotalQuantity();
 
             handleExistingReplenish(queue, existingOrder);
             if (queue.isEmpty()) {
@@ -72,7 +72,7 @@ public class OrderBook {
             int existingVisible = existingOrder.getVisibleQuantity();
 
             // Calculate the amount traded in this match
-            int matchQuantity = Math.min(incomingVisible, existingVisible);
+            int matchQuantity = Math.min(incomingQuantity, existingVisible);
             if (matchQuantity == 0) {
                 continue;
             }
@@ -80,7 +80,6 @@ public class OrderBook {
             executeMatch(incomingOrder, existingOrder, matchQuantity, bestPrice, matchInfoByOrderId);
 
             // Update the incoming and existing order quantities
-            handleIncomingReplenish(incomingOrder);
             handleExistingReplenish(queue, existingOrder);
             if (queue.isEmpty()) {
                 oppositeSide.remove(bestPrice);
@@ -134,7 +133,7 @@ public class OrderBook {
      * Applies a match and records trade info.
      */
     private void executeMatch(Order incomingOrder, Order existingOrder, int matchQuantity, int price, Map<Integer, MatchInfo> matchInfoByOrderId) {
-        incomingOrder.reduceQuantity(matchQuantity);
+        incomingOrder.reduceIncomingQuantity(matchQuantity);
         existingOrder.reduceQuantity(matchQuantity);
 
         MatchInfo matchInfo = matchInfoByOrderId.get(existingOrder.getId());
@@ -156,15 +155,6 @@ public class OrderBook {
                 existingOrder.replenish();
                 queue.addLast(existingOrder);
             }
-        }
-    }
-
-    /**
-     * Handles replenishment for the incoming order when its visible quantity is depleted.
-     */
-    private void handleIncomingReplenish(Order incomingOrder) {
-        if (incomingOrder.getVisibleQuantity() == 0 && incomingOrder.getTotalQuantity() > 0) {
-            incomingOrder.replenish();
         }
     }
 

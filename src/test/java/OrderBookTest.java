@@ -288,7 +288,7 @@ public class OrderBookTest {
         assertEquals(21, totalMatched);
         assertEquals(0, orderBook.getSellRows().size());
         assertEquals(1, orderBook.getBuyRows().size());
-        assertEquals(9, orderBook.getBuyRows().get(0).getVolume());
+        assertEquals(10, orderBook.getBuyRows().get(0).getVolume());
         assertEquals(2, trades.size());
     }
 
