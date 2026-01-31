@@ -16,6 +16,6 @@ public class LimitOrder extends Order {
 
     @Override
     public void replenish() {
-        // No-op for limit orders
+        // No replenishment needed for limit orders
     }
 }

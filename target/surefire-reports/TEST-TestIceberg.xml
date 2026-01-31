@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="TestInputParser" time="0.003" tests="6" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="TestIceberg" time="0.004" tests="3" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -59,10 +59,7 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="69.0"/>
   </properties>
-  <testcase name="testParseEmptyLine" classname="TestInputParser" time="0"/>
-  <testcase name="testParseInvalidFormat" classname="TestInputParser" time="0"/>
-  <testcase name="testParseIcebergOrder" classname="TestInputParser" time="0"/>
-  <testcase name="testParseComment" classname="TestInputParser" time="0.001"/>
-  <testcase name="testParseLimitOrder" classname="TestInputParser" time="0"/>
-  <testcase name="testParseInvalidSide" classname="TestInputParser" time="0.001"/>
+  <testcase name="runTest(String, String, String)[1]" classname="TestIceberg" time="0.001"/>
+  <testcase name="runTest(String, String, String)[2]" classname="TestIceberg" time="0.001"/>
+  <testcase name="runTest(String, String, String)[3]" classname="TestIceberg" time="0.001"/>
 </testsuite>

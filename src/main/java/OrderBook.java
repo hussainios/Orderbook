@@ -29,7 +29,7 @@ public class OrderBook {
 
         // Add remaining quantity to the book if it has remaining quantity after matching
         if (incomingOrder.getTotalQuantity() > 0) {
-            incomingOrder.replenish(); // Reset visible quantity for icebergs
+            incomingOrder.replenish(); 
             if (incomingOrder.getSide() == 'B') {
                 buySide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
             } else {
@@ -63,25 +63,11 @@ public class OrderBook {
             ArrayDeque<Order> queue = bestEntry.getValue();
             Order existingOrder = queue.peekFirst();
 
-            // Match against the existing order's visible quantity
-            // Polymorphism handles whether this is a Limit or Iceberg order
+            // Match the incoming order's total quantity against the existing order's visible quantity
             int existingVisible = existingOrder.getVisibleQuantity();
             int incomingTotal = incomingOrder.getTotalQuantity();
 
-            // Calculate the amount traded in this match
             int matchQuantity = Math.min(incomingTotal, existingVisible);
-            
-            if (matchQuantity == 0) {
-                 // Should not happen if logic is correct, but safe to remove if empty
-                if (existingVisible == 0) {
-                     queue.removeFirst();
-                     if (queue.isEmpty()) {
-                        oppositeSide.remove(bestPrice);
-                     }
-                     continue;
-                }
-            }
-
             executeMatch(incomingOrder, existingOrder, matchQuantity, bestPrice, matchInfoByOrderId);
 
             // Handle replenishment or removal of the existing order

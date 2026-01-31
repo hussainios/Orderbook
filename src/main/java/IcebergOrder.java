@@ -22,7 +22,6 @@ public class IcebergOrder extends Order {
     public void reduceQuantity(int amount) {
         this.totalQuantity -= amount;
         this.currentVisibleQuantity -= amount;
-        // Ensure visible quantity doesn't go below zero (though logic should prevent this)
         if (this.currentVisibleQuantity < 0) {
             this.currentVisibleQuantity = 0;
         }
@@ -30,7 +29,7 @@ public class IcebergOrder extends Order {
 
     /**
      * Replenishes the visible quantity from the remaining total quantity.
-     * This should be called when the visible quantity is exhausted.
+     * This is called when the visible quantity is exhausted and the order is in the book.
      */
     public void replenish() {
         if (totalQuantity > 0) {
