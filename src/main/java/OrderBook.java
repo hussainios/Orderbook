@@ -30,6 +30,7 @@ public class OrderBook {
         // Add remaining quantity to the book if it has remaining quantity after matching
         if (incomingOrder.getTotalQuantity() > 0) {
             incomingOrder.replenish(); 
+
             if (incomingOrder.getSide() == 'B') {
                 buySide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
             } else {
@@ -105,7 +106,6 @@ public class OrderBook {
         List<BookRow> rows = new ArrayList<>();
         for (Map.Entry<Integer, ArrayDeque<Order>> entry : orderSide.entrySet()) {
             for (Order o : entry.getValue()) {
-                // Polymorphic call to getVisibleQuantity()
                 rows.add(new BookRow(o.getId(), o.getVisibleQuantity(), entry.getKey()));
             }
         }
