@@ -33,7 +33,7 @@ public abstract class Order {
     /**
      * Replenishes the visible quantity.
      * For Limit orders, this does nothing.
-     * For Iceberg orders, this resets visible quantity based on peak size and remaining total.
+     * For Iceberg orders, this resets Visible quantity based on peak size and remaining total.
      */
     public abstract void replenish();
 }
