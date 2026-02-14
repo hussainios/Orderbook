@@ -61,3 +61,24 @@ mvn test
 
 This projects contains unit tests labeled by file, End-to-end tests for iceberg orders in TestIceberg.java and for 
 limit orders in VerificationTest.java 
+
+
+
+## How to run
+
+### Prerequisites
+- Java (JDK) installed
+- Maven installed
+
+### Build and run tests
+```bash
+mvn test
+Build the project
+mvn package
+Run the simulator
+Reads CSV from stdin and writes results to stdout.
+mvn -q exec:java -Dexec.mainClass=SETSOrderBookExercise < input.csv
+Example (inline input)
+cat << 'EOF' | mvn -q exec:java -Dexec.mainClass=SETSOrderBookExercise
+B,100322,5103,7500
+S,100345,5103,100000,10000
