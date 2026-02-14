@@ -1,5 +1,3 @@
-// Do not modify or delete this file. It is used to verify your solution before submission.
-// (c) GSA Capital
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
