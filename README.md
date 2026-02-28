@@ -1,4 +1,4 @@
-# SETSmm Iceberg Order Book Simulator
+# Limit/Iceberg Order Book Simulator
 
 This is a simulator for a SETS-style order book. It supports **limit** and
 **iceberg** orders, reads input from `stdin` as CSV, prints any resulting trades, and then prints
