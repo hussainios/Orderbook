@@ -1,84 +1,108 @@
 # SETSmm Iceberg Order Book Simulator
 
-This is a simulator for a SETS-style order book. It supports **limit** and
-**iceberg** orders, reads input from `stdin` as CSV, prints any resulting trades, and then prints
-the full book after each valid order.
+This project simulates a SETS-style order book with support for:
+
+- `ADD` limit orders
+- `ADD` iceberg orders
+- `CANCEL` by `orderId`
+
+It reads CSV commands from `stdin`, prints any resulting trades, and then prints the full book after each valid accepted command.
 
 ## Overview
-- `InputParser` turns each input line into an `Order`.
-- `OrderBook` adds the order to the orderbook and returns any trades that are created as a result
-- `OrderOutputter` prints trades and the book snapshot.
+- `InputParser` parses each input line into a `BookCommand`
+- `OrderBook` processes `ADD` and `CANCEL` commands
+- `OrderOutputter` prints trades and the current book snapshot
 
-## Input Format (CSV)
-**Limit order**
+## Input Format
+### Add limit order
+```text
+ADD,B,100322,5103,7500
 ```
-B,100322,5103,7500
-```
-Format: `Side,Id,Price,Quantity`
 
-**Iceberg order**
-```
-S,100345,5103,100000,10000
-```
-Format: `Side,Id,Price,Quantity,Peak`
+Format: `ADD,Side,Id,Price,Quantity`
 
-- `Side`: `B` (buy) or `S` (sell)
+### Add iceberg order
+```text
+ADD,S,100345,5103,100000,10000
+```
+
+Format: `ADD,Side,Id,Price,Quantity,Peak`
+
+### Cancel order
+```text
+CANCEL,100322
+```
+
+Format: `CANCEL,Id`
+
+### Field meanings
+- `Side`: `B` for buy or `S` for sell
 - `Price`: whole pence
-- `Peak`: visible quantity (<= total quantity)
+- `Quantity`: total order quantity
+- `Peak`: visible quantity for an iceberg order
 
-Empty lines or lines starting with `#` are ignored
+## Command Behavior
+- Empty lines and lines starting with `#` are ignored
+- Legacy implicit add syntax like `B,100322,5103,7500` is rejected
+- `CANCEL` for a non-live order is invalid and ignored
+- `ADD` with an `orderId` that is already live on the book is invalid and ignored
+- A successful `CANCEL` prints the updated book and no trades
 
 ## Output Format
-After each line is processed, Creates trades and the current Orderbook state are outputted.
+After each valid accepted command, the simulator outputs:
 
-1. **Trades** :
-```
+1. Trades, if any, in the format:
+```text
 buyId,sellId,price,quantity
 ```
 
-2. **OrderBook** formatted with fixed column widths:
-- IDs are plain numbers (no commas)
-- Prices and volumes use comma separators
+2. The current order book with fixed-width columns
 
-## Assumptions and scope
-1) **Iceberg Execution**:
-   - When an existing iceberg’s visible quantity is fully traded, it is replenished from its remaining total quantity.
-   - Upon replenishment, the order **loses time priority** and is re-queued at the back of its price level.
-   - Incoming iceberg orders that match partially will also replenish their visible quantity before entering the book.
-2) Inputs are valid, so `InputParser` does not include defensive error handling.
-3) Price, ID, and quantity values fit within the required output widths.
-4) I assume that Iceberg orders not have PeakSize = 0
+IDs are printed as plain numbers. Prices and volumes use comma separators.
+
+## Matching and Iceberg Behavior
+- Matching is price-time priority within the current queue structure
+- When a resting iceberg’s visible quantity is exhausted and hidden quantity remains, it replenishes and moves to the back of its price level
+- Incoming iceberg orders that partially match replenish their visible quantity before resting on the book
+- `CANCEL` removes the remaining resting quantity for the targeted live order
 
 ## Entrypoint
 `SETSOrderBookExercise` reads from `stdin` and writes to `stdout`.
 
 ## Tests
-JUnit 5 tests are used for tests. They can be run with:
+Run the test suite with:
 
-```
-mvn test
-```
-
-This projects contains unit tests labeled by file, End-to-end tests for iceberg orders in TestIceberg.java and for 
-limit orders in VerificationTest.java 
-
-
-
-## How to run
-
-### Prerequisites
-- Java (JDK) installed
-- Maven installed
-
-### Build and run tests
 ```bash
 mvn test
-Build the project
+```
+
+The project includes:
+- unit tests for parser, orders, trades, output, and book behavior
+- end-to-end limit/add/cancel tests in `VerificationTest`
+- end-to-end iceberg scenarios in `TestIceberg`
+
+## How to Run
+### Prerequisites
+- Java (JDK)
+- Maven
+
+### Build and test
+```bash
+mvn test
 mvn package
-Run the simulator
-Reads CSV from stdin and writes results to stdout.
+```
+
+### Run the simulator
+```bash
 mvn -q exec:java -Dexec.mainClass=SETSOrderBookExercise < input.csv
-Example (inline input)
-cat << 'EOF' | mvn -q exec:java -Dexec.mainClass=SETSOrderBookExercise
-B,100322,5103,7500
-S,100345,5103,100000,10000
+```
+
+Example:
+
+```bash
+cat <<'EOF' | mvn -q exec:java -Dexec.mainClass=SETSOrderBookExercise
+ADD,B,100322,5103,7500
+ADD,S,100345,5103,100000,10000
+CANCEL,100322
+EOF
+```
