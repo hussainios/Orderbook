@@ -1,6 +1,22 @@
 import java.util.*;
 
 public class OrderBook {
+    /**
+     * Metadata for a resting live order so cancel can jump directly to the
+     * correct side and price level.
+     */
+    private static class LiveOrderRef {
+        private final char side;
+        private final int price;
+        private final Order order;
+
+        private LiveOrderRef(char side, int price, Order order) {
+            this.side = side;
+            this.price = price;
+            this.order = order;
+        }
+    }
+
     private static class MatchInfo {
         private int quantity;
         private int price;
@@ -20,10 +36,16 @@ public class OrderBook {
     // price : Queue[OrderID]  Sell side (Price ASC)
     private TreeMap<Integer, ArrayDeque<Order>> sellSide = new TreeMap<>();
 
+    // orderId : resting live order metadata
+    private Map<Integer, LiveOrderRef> liveOrders = new HashMap<>();
+
     /**
      * Adds an order, performs matching, and returns any resulting trades.
      */
     public List<Trade> addOrder(Order incomingOrder) {
+        if (hasLiveOrder(incomingOrder.getId())) {
+            throw new IllegalArgumentException("Order id is already live: " + incomingOrder.getId());
+        }
 
         List<Trade> trades = processMatches(incomingOrder);
 
@@ -36,9 +58,39 @@ public class OrderBook {
             } else {
                 sellSide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
             }
+            liveOrders.put(incomingOrder.getId(), new LiveOrderRef(incomingOrder.getSide(), incomingOrder.getPrice(), incomingOrder));
         }
 
         return trades;
+    }
+
+    public boolean cancelOrder(int orderId) {
+        LiveOrderRef liveOrderRef = liveOrders.get(orderId);
+        if (liveOrderRef == null) {
+            return false;
+        }
+
+        TreeMap<Integer, ArrayDeque<Order>> sideMap = getSideMap(liveOrderRef.side);
+        ArrayDeque<Order> priceLevelQueue = sideMap.get(liveOrderRef.price);
+        if (priceLevelQueue == null) {
+            return false;
+        }
+
+        // Use an iterator so we can safely remove from the deque while scanning it.
+        Iterator<Order> iterator = priceLevelQueue.iterator();
+        while (iterator.hasNext()) {
+            Order order = iterator.next();
+            if (order == liveOrderRef.order) {
+                iterator.remove();
+                liveOrders.remove(orderId);
+                if (priceLevelQueue.isEmpty()) {
+                    sideMap.remove(liveOrderRef.price);
+                }
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -77,6 +129,8 @@ public class OrderBook {
                 if (existingOrder.getTotalQuantity() > 0) {
                     existingOrder.replenish();
                     queue.addLast(existingOrder);
+                } else {
+                    liveOrders.remove(existingOrder.getId());
                 }
             }
 
@@ -121,11 +175,22 @@ public class OrderBook {
         return sellSide.containsKey(price) ? sellSide.get(price).size() : 0;
     }
 
+    public boolean hasLiveOrder(int orderId) {
+        return liveOrders.containsKey(orderId);
+    }
+
     /**
      * Returns the opposite side map for the given side.
      */
     private TreeMap<Integer, ArrayDeque<Order>> determineOppositeSide(char side) {
         return (side == 'B') ? sellSide : buySide;
+    }
+
+    /**
+     * Returns the book side for the given side.
+     */
+    private TreeMap<Integer, ArrayDeque<Order>> getSideMap(char side) {
+        return (side == 'B') ? buySide : sellSide;
     }
 
     /**

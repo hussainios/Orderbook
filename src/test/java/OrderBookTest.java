@@ -6,7 +6,7 @@ public class OrderBookTest {
     public void testAddLimitOrder() {
         OrderBook orderBook = new OrderBook();
         Order order = new LimitOrder('B', 1, 200, 100);
-        orderBook.addOrder(order);
+        assertNotNull(orderBook.addOrder(order));
         assertEquals(1, orderBook.getBuyOrderCount(200));
         assertEquals(0, orderBook.getSellOrderCount(200));
     }
@@ -15,7 +15,7 @@ public class OrderBookTest {
     public void testAddIcebergOrder() {
         OrderBook orderBook = new OrderBook();
         Order order = new IcebergOrder('B', 1, 200, 100, 100);
-        orderBook.addOrder(order);
+        assertNotNull(orderBook.addOrder(order));
         assertEquals(1, orderBook.getBuyOrderCount(200));
         assertEquals(0, orderBook.getSellOrderCount(200));
         assertEquals(1, orderBook.getBuyRows().get(0).getId());
@@ -27,7 +27,7 @@ public class OrderBookTest {
     public void testAddSellOrder() {
         OrderBook orderBook = new OrderBook();
         Order order = new LimitOrder('S', 1, 200, 100);
-        orderBook.addOrder(order);
+        assertNotNull(orderBook.addOrder(order));
         assertEquals(0, orderBook.getBuyOrderCount(200));
         assertEquals(1, orderBook.getSellOrderCount(200));
         assertEquals(1, orderBook.getSellRows().get(0).getId());
@@ -38,8 +38,8 @@ public class OrderBookTest {
         OrderBook orderBook = new OrderBook();
         Order order = new LimitOrder('B', 1, 200, 100);
         Order order1 = new LimitOrder('B', 2, 200, 100);
-        orderBook.addOrder(order);
-        orderBook.addOrder(order1);
+        assertNotNull(orderBook.addOrder(order));
+        assertNotNull(orderBook.addOrder(order1));
         assertEquals(2, orderBook.getBuyOrderCount(200));
         assertEquals(1, orderBook.getBuyRows().get(0).getId());
         assertEquals(2, orderBook.getBuyRows().get(1).getId());
@@ -215,6 +215,65 @@ public class OrderBookTest {
         assertEquals(25, trades.get(0).getQuantity());
         assertEquals(0, orderBook.getSellOrderCount(100));
         assertEquals(1, orderBook.getBuyOrderCount(100));
+    }
+
+    @Test
+    public void testCancelRestingLimitOrder() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(new LimitOrder('B', 1, 100, 10));
+
+        assertTrue(orderBook.cancelOrder(1));
+        assertEquals(0, orderBook.getBuyOrderCount(100));
+        assertTrue(orderBook.getBuyRows().isEmpty());
+    }
+
+    @Test
+    public void testCancelRestingIcebergOrder() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(new IcebergOrder('S', 1, 100, 25, 10));
+
+        assertTrue(orderBook.cancelOrder(1));
+        assertEquals(0, orderBook.getSellOrderCount(100));
+        assertTrue(orderBook.getSellRows().isEmpty());
+    }
+
+    @Test
+    public void testCancelMiddleOrderInPriceLevel() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(new LimitOrder('S', 1, 100, 5));
+        orderBook.addOrder(new LimitOrder('S', 2, 100, 7));
+        orderBook.addOrder(new LimitOrder('S', 3, 100, 9));
+
+        assertTrue(orderBook.cancelOrder(2));
+        List<BookRow> sells = orderBook.getSellRows();
+        assertEquals(2, sells.size());
+        assertEquals(1, sells.get(0).getId());
+        assertEquals(3, sells.get(1).getId());
+    }
+
+    @Test
+    public void testCancelAfterPartialFillRemovesRemainingQuantity() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(new LimitOrder('S', 1, 100, 30));
+        orderBook.addOrder(new LimitOrder('B', 2, 100, 10));
+
+        assertTrue(orderBook.cancelOrder(1));
+        assertEquals(0, orderBook.getSellOrderCount(100));
+    }
+
+    @Test
+    public void testCancelNonLiveOrderFails() {
+        OrderBook orderBook = new OrderBook();
+        assertFalse(orderBook.cancelOrder(999));
+    }
+
+    @Test
+    public void testDuplicateLiveAddIsRejected() {
+        OrderBook orderBook = new OrderBook();
+        assertNotNull(orderBook.addOrder(new LimitOrder('B', 1, 100, 10)));
+        assertThrows(IllegalArgumentException.class, () -> orderBook.addOrder(new LimitOrder('S', 1, 100, 10)));
+        assertEquals(1, orderBook.getBuyOrderCount(100));
+        assertEquals(0, orderBook.getSellOrderCount(100));
     }
 
     @Test

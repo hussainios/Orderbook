@@ -14,11 +14,19 @@ public class SETSOrderBookExercise {
 
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
-            Order order = InputParser.parseLine(line);
-            if (order != null) {
-                List<Trade> trades = book.addOrder(order);
-                outputter.printTrades(trades);
-                outputter.printBook(book.getBuyRows(), book.getSellRows());
+            BookCommand command = InputParser.parseLine(line);
+            if (command instanceof AddCommand) {
+                Order order = ((AddCommand) command).getOrder();
+                if (!book.hasLiveOrder(order.getId())) {
+                    List<Trade> trades = book.addOrder(order);
+                    outputter.printTrades(trades);
+                    outputter.printBook(book.getBuyRows(), book.getSellRows());
+                }
+            } else if (command instanceof CancelCommand) {
+                boolean cancelled = book.cancelOrder(((CancelCommand) command).getOrderId());
+                if (cancelled) {
+                    outputter.printBook(book.getBuyRows(), book.getSellRows());
+                }
             }
         }
         scanner.close();

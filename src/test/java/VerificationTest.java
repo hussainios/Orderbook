@@ -51,8 +51,8 @@ public class VerificationTest {
         return Stream.of(
             Arguments.of("NormalOrder", 
                 ""
-                .concat("B,1,1,1\n")
-                .concat("S,2,2,1"),
+                .concat("ADD,B,1,1,1\n")
+                .concat("ADD,S,2,2,1"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -72,8 +72,8 @@ public class VerificationTest {
                 .concat("\n")
                 .concat("# Comment\n")
                 .concat(" # Another valid comment\n")
-                .concat("B,1,1,1\n")
-                .concat("S,2,2,1"),
+                .concat("ADD,B,1,1,1\n")
+                .concat("ADD,S,2,2,1"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -90,8 +90,8 @@ public class VerificationTest {
             ),
             Arguments.of("OrderIdFormat", 
                 ""
-                .concat("B,123456789,1,1\n")
-                .concat("S,123456780,2,1"),
+                .concat("ADD,B,123456789,1,1\n")
+                .concat("ADD,S,123456780,2,1"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -108,8 +108,8 @@ public class VerificationTest {
             ),
             Arguments.of("OrderPriceFormat", 
                 ""
-                .concat("B,1,12345,1\n")
-                .concat("S,2,12346,1"),
+                .concat("ADD,B,1,12345,1\n")
+                .concat("ADD,S,2,12346,1"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -126,8 +126,8 @@ public class VerificationTest {
             ),
             Arguments.of("OrderVolumeFormat", 
                 ""
-                .concat("S,1,2,1234567890\n")
-                .concat("B,2,1,1234567890"),
+                .concat("ADD,S,1,2,1234567890\n")
+                .concat("ADD,B,2,1,1234567890"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -144,9 +144,9 @@ public class VerificationTest {
             ),
             Arguments.of("SingleTrade", 
                 ""
-                .concat("B,1,1,2\n")
-                .concat("S,2,2,1\n")
-                .concat("S,3,1,1"),
+                .concat("ADD,B,1,1,2\n")
+                .concat("ADD,S,2,2,1\n")
+                .concat("ADD,S,3,1,1"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -166,6 +166,35 @@ public class VerificationTest {
                 .concat("| Id       | Volume      | Price | Price | Volume      | Id       |\n")
                 .concat("+----------+-------------+-------+-------+-------------+----------+\n")
                 .concat("|         1|            1|      1|      2|            1|         2|\n")
+                .concat("+-----------------------------------------------------------------+")
+            ),
+            Arguments.of("SuccessfulCancel",
+                ""
+                .concat("ADD,B,1,100,10\n")
+                .concat("CANCEL,1"),
+                ""
+                .concat("+-----------------------------------------------------------------+\n")
+                .concat("| BUY                            | SELL                           |\n")
+                .concat("| Id       | Volume      | Price | Price | Volume      | Id       |\n")
+                .concat("+----------+-------------+-------+-------+-------------+----------+\n")
+                .concat("|         1|           10|    100|       |             |          |\n")
+                .concat("+-----------------------------------------------------------------+\n")
+                .concat("+-----------------------------------------------------------------+\n")
+                .concat("| BUY                            | SELL                           |\n")
+                .concat("| Id       | Volume      | Price | Price | Volume      | Id       |\n")
+                .concat("+----------+-------------+-------+-------+-------------+----------+\n")
+                .concat("+-----------------------------------------------------------------+")
+            ),
+            Arguments.of("InvalidCancelIgnored",
+                ""
+                .concat("ADD,B,1,100,10\n")
+                .concat("CANCEL,999"),
+                ""
+                .concat("+-----------------------------------------------------------------+\n")
+                .concat("| BUY                            | SELL                           |\n")
+                .concat("| Id       | Volume      | Price | Price | Volume      | Id       |\n")
+                .concat("+----------+-------------+-------+-------+-------------+----------+\n")
+                .concat("|         1|           10|    100|       |             |          |\n")
                 .concat("+-----------------------------------------------------------------+")
             )
         );

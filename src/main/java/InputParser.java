@@ -1,13 +1,12 @@
 public class InputParser {
 
     /**
-     * Parses a line of text into an {@link Order} object.
-     * Supports both limit and iceberg order formats.
+     * Parses a line of text into a book command.
      *
      * @param line The line of text to parse
-     * @return an {@link Order} if parsing is successful, otherwise null
+     * @return a {@link BookCommand} if parsing is successful, otherwise null
      */
-    public static Order parseLine(String line) {
+    public static BookCommand parseLine(String line) {
         if (line == null) return null;
 
         line = line.trim();
@@ -18,27 +17,44 @@ public class InputParser {
 
         String[] parts = line.split(",", -1);
 
-        if (parts.length != 4 && parts.length != 5) {
-            return null;
-        }
-
-        char side = parts[0].trim().charAt(0);
-        if (side != 'B' && side != 'S') {
-            return null;
-        }
+        String action = parts[0].trim();
 
         try {
-            int id = Integer.parseInt(parts[1].trim());
-            int price = Integer.parseInt(parts[2].trim());
-            int totalQuantity = Integer.parseInt(parts[3].trim());
+            if ("ADD".equals(action)) {
+                if (parts.length != 5 && parts.length != 6) {
+                    return null;
+                }
 
-            if (parts.length == 4) {
-                // limit order has no peak size
-                return new LimitOrder(side, id, price, totalQuantity);
+                char side = parts[1].trim().charAt(0);
+                if (side != 'B' && side != 'S') {
+                    return null;
+                }
+
+                int id = Integer.parseInt(parts[2].trim());
+                int price = Integer.parseInt(parts[3].trim());
+                int totalQuantity = Integer.parseInt(parts[4].trim());
+
+                if (parts.length == 5) {
+                    return new AddCommand(new LimitOrder(side, id, price, totalQuantity));
+                }
+
+                int peakSize = Integer.parseInt(parts[5].trim());
+                return new AddCommand(new IcebergOrder(side, id, price, totalQuantity, peakSize));
             }
-            int peakSize = Integer.parseInt(parts[4].trim());
-            return new IcebergOrder(side, id, price, totalQuantity, peakSize);
+
+            if ("CANCEL".equals(action)) {
+                if (parts.length != 2) {
+                    return null;
+                }
+
+                int orderId = Integer.parseInt(parts[1].trim());
+                return new CancelCommand(orderId);
+            }
+
+            return null;
         } catch (NumberFormatException e) {
+            return null;
+        } catch (StringIndexOutOfBoundsException e) {
             return null;
         }
     }

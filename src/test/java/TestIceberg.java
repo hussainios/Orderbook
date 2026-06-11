@@ -53,9 +53,9 @@ public class TestIceberg {
         return Stream.of(
             Arguments.of("IcebergExecution", 
                 ""
-                .concat("B,1,100,50,20\n")
-                .concat("S,2,100,20\n")
-                .concat("S,3,100,10"),
+                .concat("ADD,B,1,100,50,20\n")
+                .concat("ADD,S,2,100,20\n")
+                .concat("ADD,S,3,100,10"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -80,10 +80,10 @@ public class TestIceberg {
             ),
             Arguments.of("IcebergPriorityLoss", 
                 ""
-                .concat("B,1,100,50,20\n")
-                .concat("B,2,100,10\n")
-                .concat("S,3,100,20\n")
-                .concat("S,4,100,10"),
+                .concat("ADD,B,1,100,50,20\n")
+                .concat("ADD,B,2,100,10\n")
+                .concat("ADD,S,3,100,20\n")
+                .concat("ADD,S,4,100,10"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -116,8 +116,8 @@ public class TestIceberg {
             ),
             Arguments.of("AggressiveIcebergPeakReset",
                 ""
-                .concat("S,1,100,15\n")
-                .concat("B,2,100,100,10"),
+                .concat("ADD,S,1,100,15\n")
+                .concat("ADD,B,2,100,100,10"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -135,12 +135,12 @@ public class TestIceberg {
             ), // Test cases from the LSE document
             Arguments.of("AggressiveIcebergOrderEntry",
                 ""
-                .concat("B,1,99,50000\n")
-                .concat("B,2,98,25500\n")
-                .concat("S,3,100,10000\n")
-                .concat("S,4,100,7500\n")
-                .concat("S,5,101,20000\n")
-                .concat("B,6,100,100000,10000"),
+                .concat("ADD,B,1,99,50000\n")
+                .concat("ADD,B,2,98,25500\n")
+                .concat("ADD,S,3,100,10000\n")
+                .concat("ADD,S,4,100,7500\n")
+                .concat("ADD,S,5,101,20000\n")
+                .concat("ADD,B,6,100,100000,10000"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -190,12 +190,12 @@ public class TestIceberg {
             ),
             Arguments.of("PassiveIcebergOrderExecution",
                 ""
-                .concat("B,1,99,50000\n")
-                .concat("B,2,98,25500\n")
-                .concat("S,5,101,20000\n")
-                .concat("B,6,100,82500,10000\n")
-                .concat("S,7,100,10000\n")
-                .concat("S,8,100,11000"),
+                .concat("ADD,B,1,99,50000\n")
+                .concat("ADD,B,2,98,25500\n")
+                .concat("ADD,S,5,101,20000\n")
+                .concat("ADD,B,6,100,82500,10000\n")
+                .concat("ADD,S,7,100,10000\n")
+                .concat("ADD,S,8,100,11000"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
@@ -246,15 +246,15 @@ public class TestIceberg {
             ),
             Arguments.of("MultipleIcebergExecution",
                 ""
-                .concat("S,3,100,10000\n")
-                .concat("S,4,100,7500\n")
-                .concat("S,5,101,20000\n")
-                .concat("B,1,99,50000\n")
-                .concat("B,6,100,100000,10000\n")
-                .concat("S,102,100,10000\n")
-                .concat("S,103,100,11000\n")
-                .concat("B,7,100,50000,20000\n")
-                .concat("S,8,100,35000"),
+                .concat("ADD,S,3,100,10000\n")
+                .concat("ADD,S,4,100,7500\n")
+                .concat("ADD,S,5,101,20000\n")
+                .concat("ADD,B,1,99,50000\n")
+                .concat("ADD,B,6,100,100000,10000\n")
+                .concat("ADD,S,102,100,10000\n")
+                .concat("ADD,S,103,100,11000\n")
+                .concat("ADD,B,7,100,50000,20000\n")
+                .concat("ADD,S,8,100,35000"),
                 ""
                 .concat("+-----------------------------------------------------------------+\n")
                 .concat("| BUY                            | SELL                           |\n")
