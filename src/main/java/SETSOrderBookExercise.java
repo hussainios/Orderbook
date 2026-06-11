@@ -1,5 +1,8 @@
-import java.util.Scanner;
-import java.util.List;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Main entry point for the order book
@@ -7,28 +10,55 @@ import java.util.List;
  */
 public class SETSOrderBookExercise {
 
-    public static void main(String[] args) {
+    private static final class RunOptions {
+        private final String inputPath;
+        private final boolean benchmarkMode;
+
+        private RunOptions(String inputPath, boolean benchmarkMode) {
+            this.inputPath = inputPath;
+            this.benchmarkMode = benchmarkMode;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        RunOptions options = parseArgs(args);
         OrderBook book = new OrderBook();
         OrderOutputter outputter = new OrderOutputter();
-        Scanner scanner = new Scanner(System.in);
+        OrderBookRunner runner = new OrderBookRunner(book, outputter, !options.benchmarkMode);
 
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            BookCommand command = InputParser.parseLine(line);
-            if (command instanceof AddCommand) {
-                Order order = ((AddCommand) command).getOrder();
-                if (!book.hasLiveOrder(order.getId())) {
-                    List<Trade> trades = book.addOrder(order);
-                    outputter.printTrades(trades);
-                    outputter.printBook(book.getBuyRows(), book.getSellRows());
-                }
-            } else if (command instanceof CancelCommand) {
-                boolean cancelled = book.cancelOrder(((CancelCommand) command).getOrderId());
-                if (cancelled) {
-                    outputter.printBook(book.getBuyRows(), book.getSellRows());
-                }
+        try (Reader reader = openReader(options.inputPath)) {
+            ReplayStats stats = runner.run(reader);
+            if (options.benchmarkMode) {
+                System.out.println(stats.toSummaryString());
             }
         }
-        scanner.close();
+    }
+
+    private static RunOptions parseArgs(String[] args) {
+        String inputPath = null;
+        boolean benchmarkMode = false;
+
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if ("--benchmark".equals(arg)) {
+                benchmarkMode = true;
+            } else if ("--input".equals(arg)) {
+                if (i + 1 >= args.length) {
+                    throw new IllegalArgumentException("Missing value for --input");
+                }
+                inputPath = args[++i];
+            } else {
+                throw new IllegalArgumentException("Unknown argument: " + arg);
+            }
+        }
+
+        return new RunOptions(inputPath, benchmarkMode);
+    }
+
+    private static Reader openReader(String inputPath) throws IOException {
+        if (inputPath == null) {
+            return new InputStreamReader(System.in);
+        }
+        return Files.newBufferedReader(Path.of(inputPath));
     }
 }
