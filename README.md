@@ -117,3 +117,33 @@ It exercises:
 - a trade
 - a successful cancel
 - ignored commands for benchmark accounting
+
+## Workload Generator
+You can generate deterministic benchmark workloads with:
+
+```bash
+python3 scripts/generate_workload.py --regime balanced --commands 100000 --seed 42
+```
+
+The script writes files to:
+
+- `/Users/hussainiqbal/orderbook/Orderbook/workloads/`
+
+Available regimes:
+
+- `balanced`
+- `cancel_heavy`
+- `large_book`
+- `iceberg_heavy`
+
+Generated files use the naming format:
+
+```text
+<regime>_<commands>_<seed>.csv
+```
+
+Example benchmark run with a generated file:
+
+```bash
+mvn -q exec:java -Dexec.mainClass=SETSOrderBookExercise -Dexec.args="--input workloads/balanced_100000_42.csv --benchmark"
+```
