@@ -1,0 +1,7 @@
+# Canonical replay workload for benchmarking and regression testing.
+ADD,B,1,100,10
+ADD,S,2,101,5
+ADD,S,3,100,4
+CANCEL,2
+ADD,B,1,100,7
+CANCEL,999
