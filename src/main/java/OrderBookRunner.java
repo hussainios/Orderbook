@@ -32,6 +32,13 @@ public class OrderBookRunner {
 
     private void processLine(String line, ReplayStats stats) {
         BookCommand command = InputParser.parseLine(line);
+        if (command == null) {
+            if (isIgnoredCommandLine(line)) {
+                stats.recordIgnoredCommand();
+            }
+            return;
+        }
+
         if (command instanceof AddCommand) {
             handleAdd((AddCommand) command, stats);
         } else if (command instanceof CancelCommand) {
@@ -42,11 +49,14 @@ public class OrderBookRunner {
     private void handleAdd(AddCommand command, ReplayStats stats) {
         Order order = command.getOrder();
         if (book.hasLiveOrder(order.getId())) {
+            stats.recordIgnoredCommand();
             return;
         }
 
+        long startNanos = System.nanoTime();
         List<Trade> trades = book.addOrder(order);
-        stats.recordAcceptedAdd(trades.size());
+        long latencyNanos = System.nanoTime() - startNanos;
+        stats.recordAcceptedAdd(trades.size(), latencyNanos);
         if (printPerEventOutput) {
             outputter.printTrades(trades);
             outputter.printBook(book.getBuyRows(), book.getSellRows());
@@ -54,14 +64,26 @@ public class OrderBookRunner {
     }
 
     private void handleCancel(CancelCommand command, ReplayStats stats) {
+        long startNanos = System.nanoTime();
         boolean cancelled = book.cancelOrder(command.getOrderId());
         if (!cancelled) {
+            stats.recordIgnoredCommand();
             return;
         }
 
-        stats.recordAcceptedCancel();
+        long latencyNanos = System.nanoTime() - startNanos;
+        stats.recordAcceptedCancel(latencyNanos);
         if (printPerEventOutput) {
             outputter.printBook(book.getBuyRows(), book.getSellRows());
         }
+    }
+
+    private boolean isIgnoredCommandLine(String line) {
+        if (line == null) {
+            return false;
+        }
+
+        String trimmed = line.trim();
+        return !trimmed.isEmpty() && !trimmed.startsWith("#");
     }
 }

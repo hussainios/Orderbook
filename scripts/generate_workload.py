@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import argparse
+import heapq
 import random
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
-from collections import deque
 from pathlib import Path
-from typing import Deque, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 
 WORKLOADS_DIR = Path("/Users/hussainiqbal/orderbook/Orderbook/workloads")
@@ -52,6 +52,53 @@ class SimOrder:
             self.visible_quantity = self.total_quantity
             return
         self.visible_quantity = min(self.total_quantity, self.peak)
+
+
+class RandomizedIdPool:
+    def __init__(self) -> None:
+        self._ids: List[int] = []
+        self._positions: Dict[int, int] = {}
+
+    def __len__(self) -> int:
+        return len(self._ids)
+
+    def add(self, order_id: int) -> None:
+        self._positions[order_id] = len(self._ids)
+        self._ids.append(order_id)
+
+    def remove(self, order_id: int) -> None:
+        index = self._positions.pop(order_id)
+        last_id = self._ids.pop()
+        if index < len(self._ids):
+            self._ids[index] = last_id
+            self._positions[last_id] = index
+
+    def choice(self, rng: random.Random) -> int:
+        return self._ids[rng.randrange(len(self._ids))]
+
+
+class OrderQueue:
+    def __init__(self) -> None:
+        self._orders: "OrderedDict[int, SimOrder]" = OrderedDict()
+
+    def __bool__(self) -> bool:
+        return bool(self._orders)
+
+    def __len__(self) -> int:
+        return len(self._orders)
+
+    def append(self, order: SimOrder) -> None:
+        self._orders[order.order_id] = order
+
+    def peek_left(self) -> SimOrder:
+        return next(iter(self._orders.values()))
+
+    def popleft(self) -> SimOrder:
+        _, order = self._orders.popitem(last=False)
+        return order
+
+    def remove(self, order_id: int) -> SimOrder:
+        return self._orders.pop(order_id)
 
 
 REGIMES: Dict[str, RegimeConfig] = {
@@ -124,10 +171,12 @@ class WorkloadGenerator:
         self.mid_price = mid_price
         self.next_order_id = 1
         self.live_orders: Dict[int, SimOrder] = {}
-        self.live_ids: List[int] = []
+        self.live_ids = RandomizedIdPool()
         self.live_by_price: Dict[int, Set[int]] = defaultdict(set)
-        self.buy_book: Dict[int, Deque[SimOrder]] = defaultdict(deque)
-        self.sell_book: Dict[int, Deque[SimOrder]] = defaultdict(deque)
+        self.buy_book: Dict[int, OrderQueue] = {}
+        self.sell_book: Dict[int, OrderQueue] = {}
+        self.buy_price_heap: List[int] = []
+        self.sell_price_heap: List[int] = []
 
     def generate(self) -> List[str]:
         lines = [
@@ -201,25 +250,37 @@ class WorkloadGenerator:
 
     def _best_price(self, side: str) -> Optional[int]:
         book = self.buy_book if side == "B" else self.sell_book
-        if not book:
-            return None
-        prices = book.keys()
-        return max(prices) if side == "B" else min(prices)
+        heap = self.buy_price_heap if side == "B" else self.sell_price_heap
+
+        while heap:
+            price = -heap[0] if side == "B" else heap[0]
+            if price in book:
+                return price
+            heapq.heappop(heap)
+        return None
 
     def _pick_cancel_order_id(self) -> int:
         dense_prices = [price for price, ids in self.live_by_price.items() if len(ids) >= 3]
         if dense_prices and self.regime_name in {"cancel_heavy", "iceberg_heavy"}:
             target_price = self.rng.choice(dense_prices)
-            candidates = sorted(self.live_by_price[target_price])
-            return candidates[0] if self.rng.random() < 0.7 else self.rng.choice(candidates)
-        return self.rng.choice(self.live_ids)
+            candidate_ids = self.live_by_price[target_price]
+            if self.rng.random() < 0.7:
+                return min(candidate_ids)
+            return self.rng.choice(tuple(candidate_ids))
+        return self.live_ids.choice(self.rng)
 
     def _register_live_order(self, order: SimOrder) -> None:
         self.live_orders[order.order_id] = order
-        self.live_ids.append(order.order_id)
+        self.live_ids.add(order.order_id)
         self.live_by_price[order.price].add(order.order_id)
         book = self.buy_book if order.side == "B" else self.sell_book
-        book[order.price].append(order)
+        queue = book.get(order.price)
+        if queue is None:
+            queue = OrderQueue()
+            book[order.price] = queue
+            heap = self.buy_price_heap if order.side == "B" else self.sell_price_heap
+            heapq.heappush(heap, -order.price if order.side == "B" else order.price)
+        queue.append(order)
 
     def _remove_live_order(self, order_id: int) -> None:
         order = self.live_orders.pop(order_id)
@@ -231,7 +292,7 @@ class WorkloadGenerator:
 
         book = self.buy_book if order.side == "B" else self.sell_book
         queue = book[order.price]
-        queue.remove(order)
+        queue.remove(order_id)
         if not queue:
             del book[order.price]
 
@@ -244,7 +305,7 @@ class WorkloadGenerator:
                 break
 
             queue = opposite_book[best_price]
-            resting = queue[0]
+            resting = queue.peek_left()
             match_quantity = min(incoming.total_quantity, resting.visible_quantity)
             incoming.reduce(match_quantity)
             resting.reduce(match_quantity)

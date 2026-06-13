@@ -1,19 +1,110 @@
 import java.util.*;
 
 public class OrderBook {
+    private static class OrderNode {
+        private final Order order;
+        private OrderNode prev;
+        private OrderNode next;
+
+        private OrderNode(Order order) {
+            this.order = order;
+        }
+    }
+
+    private static class PriceLevel implements Iterable<Order> {
+        private OrderNode head;
+        private OrderNode tail;
+        private int size;
+
+        private OrderNode addLast(Order order) {
+            OrderNode node = new OrderNode(order);
+            if (tail == null) {
+                head = node;
+                tail = node;
+            } else {
+                tail.next = node;
+                node.prev = tail;
+                tail = node;
+            }
+            size++;
+            return node;
+        }
+
+        private Order peekFirst() {
+            return head == null ? null : head.order;
+        }
+
+        private void remove(OrderNode node) {
+            if (node.prev == null) {
+                head = node.next;
+            } else {
+                node.prev.next = node.next;
+            }
+
+            if (node.next == null) {
+                tail = node.prev;
+            } else {
+                node.next.prev = node.prev;
+            }
+
+            node.prev = null;
+            node.next = null;
+            size--;
+        }
+
+        private Order removeFirst() {
+            OrderNode node = head;
+            if (node == null) {
+                return null;
+            }
+            remove(node);
+            return node.order;
+        }
+
+        private boolean isEmpty() {
+            return size == 0;
+        }
+
+        private int size() {
+            return size;
+        }
+
+        @Override
+        public Iterator<Order> iterator() {
+            return new Iterator<Order>() {
+                private OrderNode current = head;
+
+                @Override
+                public boolean hasNext() {
+                    return current != null;
+                }
+
+                @Override
+                public Order next() {
+                    if (current == null) {
+                        throw new NoSuchElementException();
+                    }
+                    Order order = current.order;
+                    current = current.next;
+                    return order;
+                }
+            };
+        }
+    }
+
     /**
      * Metadata for a resting live order so cancel can jump directly to the
-     * correct side and price level.
+     * correct side, price level, and queue node.
      */
     private static class LiveOrderRef {
         private final char side;
         private final int price;
-        private final Order order;
+        private final OrderNode node;
 
-        private LiveOrderRef(char side, int price, Order order) {
+        private LiveOrderRef(char side, int price, OrderNode node) {
             this.side = side;
             this.price = price;
-            this.order = order;
+            this.node = node;
         }
     }
 
@@ -31,10 +122,10 @@ public class OrderBook {
         }
     }
     // price : Queue[OrderID]  Buy side (Price DESC)
-    private TreeMap<Integer, ArrayDeque<Order>> buySide = new TreeMap<>(Collections.reverseOrder());
+    private TreeMap<Integer, PriceLevel> buySide = new TreeMap<>(Collections.reverseOrder());
 
     // price : Queue[OrderID]  Sell side (Price ASC)
-    private TreeMap<Integer, ArrayDeque<Order>> sellSide = new TreeMap<>();
+    private TreeMap<Integer, PriceLevel> sellSide = new TreeMap<>();
 
     // orderId : resting live order metadata
     private Map<Integer, LiveOrderRef> liveOrders = new HashMap<>();
@@ -53,12 +144,13 @@ public class OrderBook {
         if (incomingOrder.getTotalQuantity() > 0) {
             incomingOrder.replenish(); 
 
+            OrderNode node;
             if (incomingOrder.getSide() == 'B') {
-                buySide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
+                node = buySide.computeIfAbsent(incomingOrder.getPrice(), k -> new PriceLevel()).addLast(incomingOrder);
             } else {
-                sellSide.computeIfAbsent(incomingOrder.getPrice(), k -> new ArrayDeque<>()).addLast(incomingOrder);
+                node = sellSide.computeIfAbsent(incomingOrder.getPrice(), k -> new PriceLevel()).addLast(incomingOrder);
             }
-            liveOrders.put(incomingOrder.getId(), new LiveOrderRef(incomingOrder.getSide(), incomingOrder.getPrice(), incomingOrder));
+            liveOrders.put(incomingOrder.getId(), new LiveOrderRef(incomingOrder.getSide(), incomingOrder.getPrice(), node));
         }
 
         return trades;
@@ -70,27 +162,18 @@ public class OrderBook {
             return false;
         }
 
-        TreeMap<Integer, ArrayDeque<Order>> sideMap = getSideMap(liveOrderRef.side);
-        ArrayDeque<Order> priceLevelQueue = sideMap.get(liveOrderRef.price);
+        TreeMap<Integer, PriceLevel> sideMap = getSideMap(liveOrderRef.side);
+        PriceLevel priceLevelQueue = sideMap.get(liveOrderRef.price);
         if (priceLevelQueue == null) {
             return false;
         }
 
-        // Use an iterator so we can safely remove from the deque while scanning it.
-        Iterator<Order> iterator = priceLevelQueue.iterator();
-        while (iterator.hasNext()) {
-            Order order = iterator.next();
-            if (order == liveOrderRef.order) {
-                iterator.remove();
-                liveOrders.remove(orderId);
-                if (priceLevelQueue.isEmpty()) {
-                    sideMap.remove(liveOrderRef.price);
-                }
-                return true;
-            }
+        priceLevelQueue.remove(liveOrderRef.node);
+        liveOrders.remove(orderId);
+        if (priceLevelQueue.isEmpty()) {
+            sideMap.remove(liveOrderRef.price);
         }
-
-        return false;
+        return true;
     }
 
     /**
@@ -102,18 +185,18 @@ public class OrderBook {
     private List<Trade> processMatches(Order incomingOrder) {
         char side = incomingOrder.getSide();
         // Sorted hashmap price : Queue[OrderID]
-        TreeMap<Integer, ArrayDeque<Order>> oppositeSide = determineOppositeSide(side);
+        TreeMap<Integer, PriceLevel> oppositeSide = determineOppositeSide(side);
         // Ordered hashmap orderID : (quantity, price)
         Map<Integer, MatchInfo> matchInfoByOrderId = new LinkedHashMap<>();
 
         while (incomingOrder.getTotalQuantity() > 0 && !oppositeSide.isEmpty()) {
 
             // Get the best price and check if it overlaps
-            Map.Entry<Integer, ArrayDeque<Order>> bestEntry = oppositeSide.firstEntry();
+            Map.Entry<Integer, PriceLevel> bestEntry = oppositeSide.firstEntry();
             int bestPrice = bestEntry.getKey();
             if (!checkPriceOverlap(side, incomingOrder.getPrice(), bestPrice)) break;
 
-            ArrayDeque<Order> queue = bestEntry.getValue();
+            PriceLevel queue = bestEntry.getValue();
             Order existingOrder = queue.peekFirst();
 
             // Match the incoming order's total quantity against the existing order's visible quantity
@@ -128,7 +211,8 @@ public class OrderBook {
                 queue.removeFirst();
                 if (existingOrder.getTotalQuantity() > 0) {
                     existingOrder.replenish();
-                    queue.addLast(existingOrder);
+                    OrderNode replenishedNode = queue.addLast(existingOrder);
+                    liveOrders.put(existingOrder.getId(), new LiveOrderRef(existingOrder.getSide(), bestPrice, replenishedNode));
                 } else {
                     liveOrders.remove(existingOrder.getId());
                 }
@@ -156,9 +240,9 @@ public class OrderBook {
      * @param orderSide A sorted Hashmap with the Prices : Queue[OrderID] representing one side of the book
      * @return a list of {@link BookRow} objects
      */
-    private List<BookRow> createBookRows(TreeMap<Integer, ArrayDeque<Order>> orderSide) {
+    private List<BookRow> createBookRows(TreeMap<Integer, PriceLevel> orderSide) {
         List<BookRow> rows = new ArrayList<>();
-        for (Map.Entry<Integer, ArrayDeque<Order>> entry : orderSide.entrySet()) {
+        for (Map.Entry<Integer, PriceLevel> entry : orderSide.entrySet()) {
             for (Order o : entry.getValue()) {
                 rows.add(new BookRow(o.getId(), o.getVisibleQuantity(), entry.getKey()));
             }
@@ -182,14 +266,14 @@ public class OrderBook {
     /**
      * Returns the opposite side map for the given side.
      */
-    private TreeMap<Integer, ArrayDeque<Order>> determineOppositeSide(char side) {
+    private TreeMap<Integer, PriceLevel> determineOppositeSide(char side) {
         return (side == 'B') ? sellSide : buySide;
     }
 
     /**
      * Returns the book side for the given side.
      */
-    private TreeMap<Integer, ArrayDeque<Order>> getSideMap(char side) {
+    private TreeMap<Integer, PriceLevel> getSideMap(char side) {
         return (side == 'B') ? buySide : sellSide;
     }
 

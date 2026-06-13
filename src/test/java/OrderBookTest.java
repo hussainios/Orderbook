@@ -238,6 +238,17 @@ public class OrderBookTest {
     }
 
     @Test
+    public void testCancelReplenishedIcebergOrder() {
+        OrderBook orderBook = new OrderBook();
+        orderBook.addOrder(new IcebergOrder('S', 1, 100, 25, 10));
+        orderBook.addOrder(new LimitOrder('B', 2, 100, 10));
+
+        assertTrue(orderBook.cancelOrder(1));
+        assertEquals(0, orderBook.getSellOrderCount(100));
+        assertTrue(orderBook.getSellRows().isEmpty());
+    }
+
+    @Test
     public void testCancelMiddleOrderInPriceLevel() {
         OrderBook orderBook = new OrderBook();
         orderBook.addOrder(new LimitOrder('S', 1, 100, 5));

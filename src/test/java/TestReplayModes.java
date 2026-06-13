@@ -43,7 +43,14 @@ public class TestReplayModes {
         assertTrue(output.contains("acceptedCommands=3"));
         assertTrue(output.contains("acceptedAdds=2"));
         assertTrue(output.contains("acceptedCancels=1"));
+        assertTrue(output.contains("ignoredCommands=0"));
         assertTrue(output.contains("tradeCount=1"));
+        assertTrue(output.contains("commandsPerSecond="));
+        assertTrue(output.contains("p50LatencyNanos="));
+        assertTrue(output.contains("p50AddLatencyNanos="));
+        assertTrue(output.contains("p50CancelLatencyNanos="));
+        assertTrue(output.contains("p95LatencyNanos="));
+        assertTrue(output.contains("p99LatencyNanos="));
         assertFalse(output.contains("| BUY"));
         assertFalse(output.contains("1,2,100,4"));
     }
@@ -62,7 +69,25 @@ public class TestReplayModes {
         assertTrue(output.contains("acceptedCommands=2"));
         assertTrue(output.contains("acceptedAdds=1"));
         assertTrue(output.contains("acceptedCancels=1"));
+        assertTrue(output.contains("ignoredCommands=2"));
         assertTrue(output.contains("tradeCount=0"));
+    }
+
+    @Test
+    public void testBenchmarkModeCountsInvalidCommandsAsIgnoredButNotComments() throws IOException {
+        String input = ""
+            + "\n"
+            + "# comment\n"
+            + "ADD,B,1,100,10\n"
+            + "BAD,ROW\n"
+            + "CANCEL,missing\n"
+            + "CANCEL,1\n";
+
+        String output = runMain(new String[] {"--benchmark"}, input);
+
+        assertTrue(output.contains("totalLinesRead=6"));
+        assertTrue(output.contains("acceptedCommands=2"));
+        assertTrue(output.contains("ignoredCommands=2"));
     }
 
     @Test
@@ -75,6 +100,7 @@ public class TestReplayModes {
         assertTrue(output.contains("acceptedCommands=4"));
         assertTrue(output.contains("acceptedAdds=3"));
         assertTrue(output.contains("acceptedCancels=1"));
+        assertTrue(output.contains("ignoredCommands=2"));
         assertTrue(output.contains("tradeCount=1"));
     }
 

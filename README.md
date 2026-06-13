@@ -79,9 +79,15 @@ Benchmark output includes:
 - `acceptedCommands`
 - `acceptedAdds`
 - `acceptedCancels`
+- `ignoredCommands`
 - `tradeCount`
 - `elapsedMillis`
 - `commandsPerSecond`
+- `p50LatencyNanos`
+- `p50AddLatencyNanos`
+- `p50CancelLatencyNanos`
+- `p95LatencyNanos`
+- `p99LatencyNanos`
 
 ## Output
 In normal mode the simulator prints:
